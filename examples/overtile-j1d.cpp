@@ -1,6 +1,7 @@
 
 #include "overtile/Expressions.h"
 #include "overtile/Field.h"
+#include "overtile/Function.h"
 #include "overtile/Grid.h"
 #include "overtile/Types.h"
 
@@ -21,6 +22,10 @@ int main(int argc, char** argv) {
 
   Expression *T1 = new BinaryOp(BinaryOp::ADD, FM1, FCtr);
   Expression *T2 = new BinaryOp(BinaryOp::ADD, T1, FP1);
+
+  Function *Func = new Function(F, T2);
+  Func->setLowerBound(0, 1);
+  Func->setUpperBound(0, 1);
   
   return 0;
 }
