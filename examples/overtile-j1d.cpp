@@ -3,7 +3,9 @@
 #include "overtile/Field.h"
 #include "overtile/Function.h"
 #include "overtile/Grid.h"
+#include "overtile/OpenCLBackEnd.h"
 #include "overtile/Types.h"
+#include <iostream>
 
 using namespace overtile;
 
@@ -28,6 +30,13 @@ int main(int argc, char** argv) {
   Func->setUpperBound(0, 1);
 
   G->appendFunction(Func);
+
+
+  OpenCLBackEnd OCL(G);
+  std::cout << "OpenCL Device:\n";
+  OCL.codegenDevice(std::cout);
+  std::cout << "\n\nOpenCL Host:\n";
+  OCL.codegenHost(std::cout);
   
   return 0;
 }

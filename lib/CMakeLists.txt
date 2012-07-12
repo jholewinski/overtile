@@ -1,17 +1,23 @@
 
 set(_sources
+  BackEnd.cpp
+  CGExpressions.cpp
   Expressions.cpp
   Field.cpp
   Function.cpp
   Grid.cpp
+  OpenCLBackEnd.cpp
   Types.cpp
 )
 
 set(_headers
+  ${HEADER_DIR}/overtile/BackEnd.h
+  ${HEADER_DIR}/overtile/CGExpressions.h
   ${HEADER_DIR}/overtile/Expressions.h
   ${HEADER_DIR}/overtile/Field.h
   ${HEADER_DIR}/overtile/Function.h
   ${HEADER_DIR}/overtile/Grid.h
+  ${HEADER_DIR}/overtile/OpenCLBackEnd.h
   ${HEADER_DIR}/overtile/Types.h
 )
 
