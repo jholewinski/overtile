@@ -6,5 +6,6 @@ set(HEADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${HEADER_DIR})
 
 add_subdirectory(lib)
+add_subdirectory(examples)
 
 install(DIRECTORY include/overtile DESTINATION include)
