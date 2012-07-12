@@ -26,6 +26,8 @@ int main(int argc, char** argv) {
   Function *Func = new Function(F, T2);
   Func->setLowerBound(0, 1);
   Func->setUpperBound(0, 1);
+
+  G->appendFunction(Func);
   
   return 0;
 }
