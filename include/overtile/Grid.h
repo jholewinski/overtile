@@ -15,6 +15,9 @@ public:
 
   /// attachField - Attaches a Field object to the grid.
   void attachField(Field *F);
+
+  //==-- Accessors --========================================================= //
+  unsigned getNumDimensions() const { return Dimensions; }
   
 private:
 
