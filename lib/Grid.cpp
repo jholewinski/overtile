@@ -5,7 +5,7 @@
 
 namespace overtile {
 
-Grid::Grid() {
+Grid::Grid(unsigned Dim) : Dimensions(Dim) {
 }
 
 Grid::~Grid() {
