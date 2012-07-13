@@ -1,4 +1,5 @@
 
+#include <string>
 
 namespace overtile {
 
@@ -10,7 +11,7 @@ class Grid;
  */
 class Field {
 public:
-  Field(Grid *G, ElementType *Ty);
+  Field(Grid *G, ElementType *Ty, const std::string &N);
   ~Field();
 
 
@@ -21,10 +22,13 @@ public:
 
   const ElementType *getElementType() const { return ElemTy; }
 
+  const std::string &getName() const { return Name; }
+  
 private:
 
   Grid        *TheGrid;
   ElementType *ElemTy;
+  std::string  Name;
 };
 
 }

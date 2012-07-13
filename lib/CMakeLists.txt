@@ -7,6 +7,7 @@ set(_sources
   Function.cpp
   Grid.cpp
   OpenCLBackEnd.cpp
+  Region.cpp
   Types.cpp
 )
 
@@ -18,6 +19,7 @@ set(_headers
   ${HEADER_DIR}/overtile/Function.h
   ${HEADER_DIR}/overtile/Grid.h
   ${HEADER_DIR}/overtile/OpenCLBackEnd.h
+  ${HEADER_DIR}/overtile/Region.h
   ${HEADER_DIR}/overtile/Types.h
 )
 

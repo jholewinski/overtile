@@ -23,6 +23,10 @@ public:
   
   //==-- Accessors --========================================================= //
   unsigned getNumDimensions() const { return Dimensions; }
+
+  const std::list<Field*> &getFieldList() const { return Fields; }
+  
+  const std::list<Function*> &getFunctionList() const { return Functions; }
   
 private:
 

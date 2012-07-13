@@ -1,6 +1,6 @@
 
 #include "overtile/OpenCLBackEnd.h"
-
+#include <cassert>
 
 namespace overtile {
 
@@ -12,6 +12,7 @@ OpenCLBackEnd::~OpenCLBackEnd() {
 }
 
 void OpenCLBackEnd::codegenDevice(std::ostream &OS) {
+  assert(getCGExpressionList().size() > 0 && "run() was not called");
   OS << "// TODO\n";
 }
 

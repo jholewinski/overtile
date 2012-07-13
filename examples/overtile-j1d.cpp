@@ -13,7 +13,7 @@ int main(int argc, char** argv) {
 
   ElementType *Ty = new FP32Type();
   Grid        *G  = new Grid(1);
-  Field       *F  = new Field(G, Ty);
+  Field       *F  = new Field(G, Ty, "A");
 
   int Offsets[]    = { -1 };
   Expression *FM1  = new FieldRef(F, 1, Offsets);
@@ -33,6 +33,10 @@ int main(int argc, char** argv) {
 
 
   OpenCLBackEnd OCL(G);
+  OCL.setVerbose(true);
+  OCL.setTimeTileSize(3);
+  OCL.run();
+  
   std::cout << "OpenCL Device:\n";
   OCL.codegenDevice(std::cout);
   std::cout << "\n\nOpenCL Host:\n";

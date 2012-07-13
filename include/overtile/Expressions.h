@@ -1,6 +1,6 @@
 
 #include <vector>
-
+#include <set>
 namespace overtile {
 
 class Field;
@@ -12,6 +12,8 @@ class Expression {
 public:
   Expression();
   virtual ~Expression();
+
+  virtual void getFields(std::set<Field*> &Fields) const = 0;
 };
 
 
@@ -32,6 +34,8 @@ public:
 
   BinaryOp(Operator O, Expression *L, Expression *R);
   virtual ~BinaryOp();
+
+  virtual void getFields(std::set<Field*> &Fields) const;
 
   //==-- Accessors --========================================================= //
   Operator getOperator() const { return Op; }
@@ -57,6 +61,13 @@ public:
   FieldRef(Field *F, const std::vector<int>& Off);
   FieldRef(Field *F, int NumOffsets, const int Off[]);
   virtual ~FieldRef();
+
+  virtual void getFields(std::set<Field*> &Fields) const;
+
+  Field *getField() { return TheField; }
+  const Field *getField() const { return TheField; }
+
+  const std::vector<int> &getOffsets() const { return Offsets; }
 
 public:
 

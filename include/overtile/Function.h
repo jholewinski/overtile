@@ -1,10 +1,12 @@
 
 #include <vector>
+#include <set>
 
 namespace overtile {
 
 class Expression;
 class Field;
+class Region;
 
 /**
  * Representation of a stencil point function.
@@ -21,8 +23,16 @@ public:
   /// setUpperBound - Sets a bound on the function so it is only applicable
   /// below element N - \p Offset in the \p Dim dimension.
   void setUpperBound(unsigned Dim, unsigned Offset);
+
+  /// getInputFields - Returns a set of Field objects that are read when
+  /// evaluating this function.
+  std::set<Field*> getInputFields() const;
+
+  /// adjustRegion - Adjusts the Region \p FRegion for Field \p F to include
+  /// and points that are needed to evaluate the function in Region \p InRegion.
+  void adjustRegion(Field *F, Region &FRegion, const Region &InRegion) const;
   
-  //==-- Accessors --========================================================= //
+  //==-- Accessors --=========================================================//
   Field *getOutput() { return OutField; }
   const Field *getOutput() const { return OutField; }
 

@@ -24,6 +24,11 @@ BinaryOp::BinaryOp(Operator O, Expression *L, Expression *R)
 BinaryOp::~BinaryOp() {
 }
 
+void BinaryOp::getFields(std::set<Field*> &Fields) const {
+  LHS->getFields(Fields);
+  RHS->getFields(Fields);
+}
+
 FieldRef::FieldRef(Field *F, const std::vector<int>& Off)
   : TheField(F), Offsets(Off) {
   assert(F != NULL && "F cannot be NULL");
@@ -43,6 +48,10 @@ FieldRef::FieldRef(Field *F, int NumOffsets, const int Off[])
 }
 
 FieldRef::~FieldRef() {
+}
+
+void FieldRef::getFields(std::set<Field*> &Fields) const {
+  Fields.insert(TheField);
 }
 
 }
