@@ -32,6 +32,9 @@ public:
   unsigned getTimeTileSize() const { return TimeTileSize; }
   void setTimeTileSize(unsigned T) { TimeTileSize = T; }
 
+  Grid *getGrid() { return TheGrid; }
+  const Grid *getGrid() const { return TheGrid; }
+  
   const std::list<CGExpression*>&
   getCGExpressionList() const { return CGExprs; }
 

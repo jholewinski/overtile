@@ -60,6 +60,7 @@ void BackEnd::generateTiling() {
       Region &OutRegion = Regions.find(Out)->second;
       std::set<Field*> Input = F->getInputFields();
 
+      // For each input field, make sure we are producing enough elements
       for (std::set<Field*>::iterator FI = Input.begin(), FE = Input.end();
              FI != FE; ++FI) {
         Region &FRegion = Regions.find(*FI)->second;
