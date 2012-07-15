@@ -41,9 +41,9 @@ void OpenCLBackEnd::codegenDevice(std::ostream &OS) {
     OS << getTypeName(F->getElementType()) << " *In_" << F->getName();
     OS << ", ";
     OS << getTypeName(F->getElementType()) << " *Out_" << F->getName();
-    for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
-      OS << ", int " << F->getName() << "_D" << i;
-    }
+  }
+  for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+    OS << ", int Dim_" << i;
   }
 
   OS << ") {\n";
