@@ -4,6 +4,7 @@
 #include "overtile/Field.h"
 #include "overtile/Grid.h"
 #include "overtile/Region.h"
+#include <iostream>
 #include <cassert>
 #include <cstdlib>
 
@@ -74,7 +75,7 @@ public:
     unsigned                NumDims = InRegion.getNumDimensions();
     Region                  NewR(NumDims);
     const std::vector<int> &Offsets = Ref->getOffsets();
-    
+
     for (unsigned i = 0; i < NumDims; ++i) {
       std::pair<int, unsigned> InBound = InRegion.getBound(i);
       std::pair<int, unsigned> FBound  = FRegion.getBound(i);

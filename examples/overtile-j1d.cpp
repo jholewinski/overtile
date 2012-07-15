@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
 
   OpenCLBackEnd OCL(G);
   OCL.setVerbose(true);
-  OCL.setTimeTileSize(3);
+  OCL.setTimeTileSize(2);
   OCL.run();
   
   std::cout << "OpenCL Device:\n";
