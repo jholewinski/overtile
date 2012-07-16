@@ -26,6 +26,8 @@ public:
     assert(Dim < Bounds.size() && "Dim is out of bounds");
     Bounds[Dim] = Bound;
   }
+
+  static Region makeUnion(const Region &A, const Region &B);
   
 private:
 

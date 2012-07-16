@@ -111,4 +111,70 @@ adjustRegion(Field *F, Region &FRegion, const Region &InRegion) const {
   V.visitExpr(Expr);
 }
 
+
+
+/// FieldRefVisitor - Helper class for adjustRegion.
+class MaxOffsetVisitor {
+public:
+  MaxOffsetVisitor(const Field *F, unsigned D, unsigned &LeftMax,
+                   unsigned    &RightMax)
+    : TheField(F), Dim(D), Left(LeftMax), Right(RightMax) {}
+
+  void visitExpr(Expression *Expr) {
+    if (BinaryOp *Op = dynamic_cast<BinaryOp*>(Expr)) {
+      visitBinaryOp(Op);
+    } else if (FieldRef *Ref = dynamic_cast<FieldRef*>(Expr)) {
+      visitFieldRef(Ref);
+    } else {
+      assert(0 && "Unhandled expression type");
+    }
+  }
+
+  void visitBinaryOp(BinaryOp *Op) {
+    visitExpr(Op->getLHS());
+    visitExpr(Op->getRHS());
+  }
+
+  void visitFieldRef(FieldRef *Ref) {
+    // The real magic happens here
+    Field *F = Ref->getField();
+    if (F != TheField) {
+      // This is a reference to a field we are not processing.
+      return;
+    }
+
+    const std::vector<int> &Offsets = Ref->getOffsets();
+    assert(Dim < Offsets.size() && "Not enough offsets");
+
+    int Off = Offsets[Dim];
+    
+    if (Off < 0) {
+      unsigned Abs = -Off;
+      if (Abs > Left)
+        Left       = Abs;
+    } else if (Off > 0) {
+      unsigned Abs = Off;
+      if (Abs > Right)
+        Right      = Abs;
+    }
+  }
+
+private:
+  const Field *TheField;
+  unsigned     Dim;
+  unsigned    &Left;
+  unsigned    &Right;
+};
+
+
+void Function::getMaxOffsets(const Field *F, unsigned Dim, unsigned &LeftMax,
+                             unsigned &RightMax) const {
+  LeftMax  = 0;
+  RightMax = 0;
+  
+  MaxOffsetVisitor V(F, Dim, LeftMax, RightMax);
+  V.visitExpr(Expr);  
+}
+
+
 }

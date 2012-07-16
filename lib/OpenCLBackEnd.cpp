@@ -6,6 +6,7 @@
 #include "overtile/Grid.h"
 #include "overtile/Types.h"
 #include <cassert>
+#include <cmath>
 
 namespace overtile {
 
@@ -38,15 +39,86 @@ void OpenCLBackEnd::codegenDevice(std::ostream &OS) {
          I != E; ++I) {
     Field *F = *I;
     if (I != B) OS << ", ";
-    OS << getTypeName(F->getElementType()) << " *In_" << F->getName();
-    OS << ", ";
+    OS << "__global " << getTypeName(F->getElementType()) << " *In_"
+       << F->getName();
+    OS << ", __global ";
     OS << getTypeName(F->getElementType()) << " *Out_" << F->getName();
+    OS << ", __local ";
+    OS << getTypeName(F->getElementType()) << " *Shared_" << F->getName();
   }
   for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
     OS << ", int Dim_" << i;
   }
+  //for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+  //  OS << ", int real_per_block_" << i;
+  //}
 
   OS << ") {\n";
+
+
+  Region BlockRegion(G->getNumDimensions());
+  // Determine region for an entire block
+  for (std::map<const Field*, Region>::const_iterator
+           I = getRegionMap().begin(),
+           E = getRegionMap().end(); I != E; ++I) {
+    const Region &R = I->second;
+    BlockRegion = Region::makeUnion(BlockRegion, R);
+  }
+    
+  for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+    std::pair<int, unsigned> Bound = BlockRegion.getBound(i);
+    int LeftHalo = Bound.first < 0 ? -Bound.first : Bound.first;
+    int RightHalo = Bound.second - LeftHalo - 1;
+    OS << "  const int Halo_Left_" << i << " = " << LeftHalo << ";\n";
+    OS << "  const int Halo_Right_" << i << " = " << RightHalo << ";\n";
+  }
+
+
+  for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+    OS << "  int real_per_block_" << i << " = get_local_size(" << i
+       << ") - Halo_Left_" << i << " - Halo_Right_" << i << ";\n";
+  }
+
+  OS << "  int array_size = ";
+  for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+    if (i != 0) OS << " * ";
+    OS << "Dim_" << i;
+  }
+  OS << ";\n";
+  
+  for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+    // Find max offsets for all fields.
+    unsigned MaxLeft = 0;
+    unsigned MaxRight = 0;
+    
+    for (std::list<Field*>::iterator I = Fields.begin(), E = Fields.end();
+           I != E; ++I) {
+      Field *InField = *I;
+      for (std::list<Function*>::iterator FI = Functions.begin(),
+         FE = Functions.end(); FI != FE; ++FI) {
+        Function *F = *FI;
+        unsigned LeftOffset = 0;
+        unsigned RightOffset = 0;
+        F->getMaxOffsets(InField, i, LeftOffset, RightOffset);
+        MaxLeft = std::max(MaxLeft, LeftOffset);
+        MaxRight = std::max(MaxRight, RightOffset);
+      }
+    }
+    
+    OS << "  int max_left_offset_" << i << " = " << MaxLeft << ";\n";
+    OS << "  int max_right_offset_" << i << " = " << MaxRight << ";\n";
+    OS << "  int shared_size_" << i << " = get_local_size(" << i << ") + " << (MaxLeft + MaxRight) << ";\n";
+  }
+
+  OS << "int AddrOffset;\n";
+
+  OS << "  // Kernel init\n";
+  for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+    OS << "  int local_" << i << " = get_local_id(" << i << ");\n";
+    OS << "  int group_" << i << " = get_group_id(" << i << ");\n";
+    OS << "  int tid_" << i << " = group_" << i << " * real_per_block_" << i
+       << " + local_" << i << ";\n";
+  }
 
 
   OS << "  // First time step\n";
@@ -55,14 +127,60 @@ void OpenCLBackEnd::codegenDevice(std::ostream &OS) {
          E = Functions.end(); I != E; ++I) {
     Function *F = *I;
     Field *Out = F->getOutput();
+    const std::vector<std::pair<unsigned, unsigned> > &Bounds = F->getBounds();
 
-    OS << "  SHARED_REF(" << Out->getName();
+    OS << "  if (";
     for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
-      OS << ", 0";
+      if (i != 0) OS << " && ";
+      OS << "(tid_" << i << " >= " << Bounds[i].first << " && tid_" << i
+         << " < Dim_" << i << " - " << Bounds[i].second << ")";
     }
-    OS << ") = ";
-    codegenExpr(F->getExpression(), OS);
+    OS << ") {\n";
+    unsigned Temp = 0;
+    OS << "{\n";
+    Temp = codegenExpr(F->getExpression(), OS, Temp);
+
+    //OS << "    SHARED_REF(" << Out->getName();
+    //for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+    //  OS << ", 0";
+    //}
+    //OS << ") = temp" << Temp << ";\n";
+
+    OS << "AddrOffset = ";
+    unsigned DimTerms = 0;
+    unsigned Dim = 0;
+    for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+      if (i != 0) OS << " + ";
+      OS << "(tid_" << i << "+max_left_offset_" << i << ")";
+      for (unsigned i = 0; i < DimTerms; ++i) {
+        OS << "*Dim_" << i;
+      }
+      ++DimTerms;
+      ++Dim;
+    }
     OS << ";\n";
+    OS << "*(Shared_" << Out->getName() << " + AddrOffset) = temp" << Temp << ";\n";
+    
+    OS << "}\n";
+    OS << "  } else {\n";
+    OS << "{\n";
+    OS << "AddrOffset = ";
+    DimTerms = 0;
+    Dim = 0;
+    for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+      if (i != 0) OS << " + ";
+      OS << "(tid_" << i << "+max_left_offset_" << i << ")";
+      for (unsigned i = 0; i < DimTerms; ++i) {
+        OS << "*Dim_" << i;
+      }
+      ++DimTerms;
+      ++Dim;
+    }
+    OS << ";\n";
+    OS << "*(Shared_" << Out->getName() << " + AddrOffset) = 0;\n";
+
+    OS << "}\n";
+    OS << "  }\n";
   }
 
   OS << "  barrier(CLK_LOCAL_MEM_FENCE);\n";
@@ -75,25 +193,71 @@ void OpenCLBackEnd::codegenDevice(std::ostream &OS) {
     Function *F = *I;
     Field *Out = F->getOutput();
 
+    unsigned Temp = 0;
+    OS << "{\n";
+    Temp = codegenExpr(F->getExpression(), OS, Temp);
     OS << "    " << getTypeName(Out->getElementType()) << " temp_"
-       << Out->getName() << " = ";
-    codegenExpr(F->getExpression(), OS);
-    OS << "\n";
-
+       << Out->getName() << " = temp" << Temp;
+    OS << ";\n";
     OS << "    barrier(CLK_LOCAL_MEM_FENCE);\n";
     OS << "    if (t == " << (getTimeTileSize() - 1) << ") {\n";
-    OS << "      OUT_FIELD_REF(" << Out->getName() << ") = temp_"
-       << Out->getName() << ";\n";
-    OS << "    } else {\n";
-    OS << "      SHARED_REF(" << Out->getName();
+
+    // Output guard
+    OS << "      if (";
     for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
-      OS << ", 0";
+      if (i != 0) OS << " && ";
+      OS << "(get_local_id(" << i << ") >= Halo_Left_" << i
+         << " && get_local_id(" << i << ") < get_local_size(" << i
+         << ") - Halo_Right_" << i << ")";
     }
-    OS << ") = temp_" << Out->getName() << ";\n";
+    OS << ") {\n";
+
+    //OS << "        OUT_FIELD_REF(" << Out->getName() << ") = temp_"
+    //   << Out->getName() << ";\n";
+    OS << "AddrOffset = ";
+    unsigned DimTerms = 0;
+    unsigned Dim = 0;
+    for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+      if (i != 0) OS << " + ";
+      OS << "tid_" << i;
+      for (unsigned i = 0; i < DimTerms; ++i) {
+        OS << "*Dim_" << i;
+      }
+      ++DimTerms;
+      ++Dim;
+    }
+    OS << ";\n";
+    OS << "*(Out_" << Out->getName() << " + AddrOffset) = temp_" << Out->getName() << ";\n";
+
+    
+    OS << "      }\n";
+    OS << "    } else {\n";
+    //OS << "      SHARED_REF(" << Out->getName();
+    //for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+    //  OS << ", 0";
+    //}
+    //OS << ") = temp_" << Out->getName() << ";\n";
+
+    OS << "AddrOffset = ";
+    DimTerms = 0;
+    Dim = 0;
+    for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+      if (i != 0) OS << " + ";
+      OS << "(tid_" << i << "+max_left_offset_" << i << ")";
+      for (unsigned i = 0; i < DimTerms; ++i) {
+        OS << "*Dim_" << i;
+      }
+      ++DimTerms;
+      ++Dim;
+    }
+    OS << ";\n";
+    OS << "*(Shared_" << Out->getName() << " + AddrOffset) = temp_" << Out->getName() << ";\n";
+
+    
     OS << "      barrier(CLK_LOCAL_MEM_FENCE);\n";
     OS << "    }\n";
   }
-  
+  OS << "}\n";  
   OS << "  }\n";
 
 
@@ -114,19 +278,23 @@ std::string OpenCLBackEnd::getTypeName(const ElementType *Ty) {
   }
 }
 
-void OpenCLBackEnd::codegenExpr(Expression *Expr, std::ostream &OS) {
+unsigned OpenCLBackEnd::codegenExpr(Expression *Expr, std::ostream &OS,
+                                    unsigned &TempIdx) {
   if (BinaryOp *Op = dynamic_cast<BinaryOp*>(Expr)) {
-    codegenBinaryOp(Op, OS);
+    return codegenBinaryOp(Op, OS, TempIdx);
   } else if (FieldRef *Ref = dynamic_cast<FieldRef*>(Expr)) {
-    codegenFieldRef(Ref, OS);
+    return codegenFieldRef(Ref, OS, TempIdx);
   } else {
     assert(0 && "Unhandled expression");
   }
 }
 
-void OpenCLBackEnd::codegenBinaryOp(BinaryOp *Op, std::ostream &OS) {
-  OS << "(";
-  codegenExpr(Op->getLHS(), OS);
+unsigned OpenCLBackEnd::codegenBinaryOp(BinaryOp *Op, std::ostream &OS,
+                                        unsigned &TempIdx) {
+  unsigned L = codegenExpr(Op->getLHS(), OS, TempIdx);
+  unsigned R = codegenExpr(Op->getRHS(), OS, TempIdx);
+  // @FIXME: Hard-coded float!
+  OS << "float temp" << TempIdx << " = temp" << L;
   switch (Op->getOperator()) {
   default: assert(0 && "Unhandled binary operator"); break;
   case BinaryOp::ADD: OS << "+"; break;
@@ -134,25 +302,53 @@ void OpenCLBackEnd::codegenBinaryOp(BinaryOp *Op, std::ostream &OS) {
   case BinaryOp::MUL: OS << "*"; break;
   case BinaryOp::DIV: OS << "/"; break;
   }
-  codegenExpr(Op->getRHS(), OS);
-  OS << ")";
+  OS << "temp" << R << ";\n";
+  return TempIdx++;
 }
 
-void OpenCLBackEnd::codegenFieldRef(FieldRef *Ref, std::ostream &OS) {
+unsigned OpenCLBackEnd::codegenFieldRef(FieldRef *Ref, std::ostream &OS,
+                                        unsigned &TempIdx) {
   Field *F = Ref->getField();
   const std::vector<int> Offsets = Ref->getOffsets();
 
-  if (InTS0) OS << "IN_FIELD_REF(";
-  else OS << "SHARED_REF(";
+  std::string Prefix;
   
-  OS << F->getName();
+  if (InTS0) Prefix = "In_";
+  else Prefix = "Shared_";
+  
+  std::string Name = F->getName();
 
-  for (std::vector<int>::const_iterator I = Offsets.begin(), E = Offsets.end();
-         I != E; ++I) {
-    OS << ", " << *I;
+  OS << "AddrOffset = ";
+
+  unsigned DimTerms = 0;
+
+  unsigned Dim = 0;
+  for (std::vector<int>::const_iterator I = Offsets.begin(),
+         E = Offsets.end(), B = I; I != E; ++I) {
+    int Offset = *I;
+    if (B != I) OS << " + ";
+    if (InTS0)
+      OS << "(tid_" << Dim << "+" << *I << ")";
+    else
+      OS << "(tid_" << Dim << "+" << *I << "+max_left_offset_" << Dim << ")";
+    for (unsigned i = 0; i < DimTerms; ++i) {
+      OS << "*Dim_" << i;
+    }
+    ++DimTerms;
+    ++Dim;
+  }
+  OS << ";\n";
+
+  if (InTS0) {
+    OS << "AddrOffset = max(AddrOffset, 0);\n";
+    OS << "AddrOffset = min(AddrOffset, array_size-1);\n";
   }
   
-  OS << ")";
+  // @FIXME: Hard-coded float!
+  OS << "float temp" << TempIdx << " = *(" << Prefix << Name
+     << " + AddrOffset);\n";
+  
+  return TempIdx++;
 }
 
 }

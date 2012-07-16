@@ -40,6 +40,8 @@ public:
 
   bool getVerbose() const { return Verbose; }
   void setVerbose(bool V) { Verbose = V; }
+
+  const std::map<const Field*, Region> &getRegionMap() const { return Regions; }
   
 private:
 

@@ -26,9 +26,9 @@ private:
   
   static std::string getTypeName(const ElementType *Ty);
 
-  void codegenExpr(Expression *Expr, std::ostream &OS);
-  void codegenBinaryOp(BinaryOp *Op, std::ostream &OS);
-  void codegenFieldRef(FieldRef *Ref, std::ostream &OS);
+  unsigned codegenExpr(Expression *Expr, std::ostream &OS, unsigned &TempIdx);
+  unsigned codegenBinaryOp(BinaryOp *Op, std::ostream &OS, unsigned &TempIdx);
+  unsigned codegenFieldRef(FieldRef *Ref, std::ostream &OS, unsigned &TempIdx);
 };
 
 }

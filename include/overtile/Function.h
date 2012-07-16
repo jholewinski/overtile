@@ -31,13 +31,23 @@ public:
   /// adjustRegion - Adjusts the Region \p FRegion for Field \p F to include
   /// and points that are needed to evaluate the function in Region \p InRegion.
   void adjustRegion(Field *F, Region &FRegion, const Region &InRegion) const;
+
+  /// getMaxOffsets - Returns in \p LeftMax and \p RightMax the left-most and
+  /// right-most offsets for field \p F that are touched by this function for
+  /// dimension \p Dim.
+  void
+  getMaxOffsets(const Field *F, unsigned Dim, unsigned &LeftMax,
+                unsigned &RightMax) const;
   
-  //==-- Accessors --=========================================================//
+  //==-- Accessors --========================================================= //
   Field *getOutput() { return OutField; }
   const Field *getOutput() const { return OutField; }
 
   Expression *getExpression() { return Expr; }
   const Expression *getExpression() const { return Expr; }
+
+  const std::vector<std::pair<unsigned, unsigned> >
+  &getBounds() const { return Bounds; }
 
 private:
 

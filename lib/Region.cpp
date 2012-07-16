@@ -24,4 +24,35 @@ void Region::dump(std::ostream &OS) {
   OS << ">";
 }
 
+Region Region::makeUnion(const Region &A, const Region &B) {
+  Region Ret(A.getNumDimensions());
+  
+  for (unsigned i = 0, e = A.getNumDimensions(); i < e; ++i) {
+    std::pair<int, unsigned> NewBounds;
+    std::pair<int, unsigned> ABound, BBound;
+
+    ABound = A.getBound(i);
+    BBound = B.getBound(i);
+    
+    NewBounds.first  = ABound.first;
+    NewBounds.second = ABound.second;
+    
+    if (BBound.first < NewBounds.first) {
+      int Diff          = NewBounds.first - BBound.first;
+      NewBounds.first   = BBound.first;
+      NewBounds.second += Diff;
+    }
+
+    if (BBound.first + BBound.second > NewBounds.first + NewBounds.second) {
+      int Diff       = BBound.first + BBound.second -
+        (NewBounds.first + NewBounds.second);
+      NewBounds.second += Diff;
+    }
+
+    Ret.reset(i, NewBounds);
+  }
+
+  return Ret;
+}
+
 }

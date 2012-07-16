@@ -37,9 +37,9 @@ int main(int argc, char** argv) {
   OCL.setTimeTileSize(2);
   OCL.run();
   
-  std::cout << "OpenCL Device:\n";
+  std::cout << "// OpenCL Device:\n";
   OCL.codegenDevice(std::cout);
-  std::cout << "\n\nOpenCL Host:\n";
+  std::cout << "\n\n// OpenCL Host:\n";
   OCL.codegenHost(std::cout);
   
   return 0;
