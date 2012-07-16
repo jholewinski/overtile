@@ -118,6 +118,8 @@ void OpenCLBackEnd::codegenDevice(std::ostream &OS) {
     OS << "  int group_" << i << " = get_group_id(" << i << ");\n";
     OS << "  int tid_" << i << " = group_" << i << " * real_per_block_" << i
        << " + local_" << i << ";\n";
+    OS << "  // Early exit\n";
+    OS << "  if (tid_" << i << " >= Dim_" << i << ") return;\n";
   }
 
 
