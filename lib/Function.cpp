@@ -177,4 +177,46 @@ void Function::getMaxOffsets(const Field *F, unsigned Dim, unsigned &LeftMax,
 }
 
 
+
+/// FieldRefVisitor - Helper class for adjustRegion.
+class FlopsVisitor {
+public:
+  FlopsVisitor()
+    : Flops(0.0) {}
+
+  void visitExpr(Expression *Expr) {
+    if (BinaryOp *Op = dynamic_cast<BinaryOp*>(Expr)) {
+      visitBinaryOp(Op);
+    } else if (FieldRef *Ref = dynamic_cast<FieldRef*>(Expr)) {
+      visitFieldRef(Ref);
+    } else {
+      assert(0 && "Unhandled expression type");
+    }
+  }
+
+  void visitBinaryOp(BinaryOp *Op) {
+    visitExpr(Op->getLHS());
+    visitExpr(Op->getRHS());
+    Flops = Flops + 1.0;
+  }
+
+  void visitFieldRef(FieldRef *Ref) {
+  }
+
+  double getFlops() const { return Flops; }
+  
+private:
+  double Flops;
+};
+
+
+double Function::countFlops() const {
+  FlopsVisitor V;
+  V.visitExpr(Expr);
+  return V.getFlops();
+}
+
+
+
+
 }

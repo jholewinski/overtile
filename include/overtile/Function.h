@@ -38,6 +38,10 @@ public:
   void
   getMaxOffsets(const Field *F, unsigned Dim, unsigned &LeftMax,
                 unsigned &RightMax) const;
+
+  /// countFlops - Returns the number of floating-point ops computed by an
+  /// invocation of this function.
+  double countFlops() const;
   
   //==-- Accessors --========================================================= //
   Field *getOutput() { return OutField; }

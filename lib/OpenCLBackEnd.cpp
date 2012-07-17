@@ -428,7 +428,9 @@ void OpenCLBackEnd::codegenHost(std::ostream &OS) {
   OS << "  std::cout << \"Local: \" << ((const size_t*)local_size)[0] << \", \" << (( const size_t*)local_size)[1] << \"\\n\";\n";
   
   OS << "  cl::Event WaitEvent;\n";
-    
+
+  OS << "  double TStart = rtclock();\n";
+  
   OS << "  for (int t = 0; t < timesteps; t += " << getTimeTileSize()
      << ") {\n";
   
@@ -465,6 +467,8 @@ void OpenCLBackEnd::codegenHost(std::ostream &OS) {
 
   OS << "  WaitEvent.wait();\n";
 
+  OS << "  double TEnd = rtclock();\n";
+    
   for (std::list<Field*>::iterator I = Fields.begin(), E = Fields.end();
            I != E; ++I) {
     Field *F = *I;
@@ -473,6 +477,26 @@ void OpenCLBackEnd::codegenHost(std::ostream &OS) {
        << getTypeName(F->getElementType()) << ")*ArraySize, Host_" << F->getName() << ", NULL, NULL);\n";
     OS << "  CLContext::throwOnError(\"Copy\", Result);\n";
   }
+
+  OS << "  double Flops = 0.0;\n";
+  OS << "  double Points;\n";
+  for (std::list<Function*>::iterator FI = Functions.begin(),
+         FE = Functions.end(); FI != FE; ++FI) {
+    Function *F = *FI;
+    double Flops = F->countFlops();
+    const std::vector<std::pair<unsigned, unsigned> > &Bounds = F->getBounds();
+
+    OS << "  Points = (Dim_0-" << (Bounds[0].first+Bounds[0].second) << ")";
+    for (unsigned i = 1, e = Bounds.size(); i < e; ++i) {
+      OS << " * (Dim_" << i << "-" << (Bounds[i].first+Bounds[i].second) << ")";
+    }
+    OS << ";\n";
+    OS << "  Flops = Flops + Points * " << Flops << ";\n";
+  }
+  OS << "  Flops = Flops * timesteps;\n";
+  OS << "  double Elapsed = TEnd - TStart;\n";
+  OS << "  double GFlops = Flops / Elapsed / 1e9;\n";
+  OS << "  std::cerr << \"GFlops: \" << GFlops << \"\\n\";\n";
   
   OS << "}\n";
 }
