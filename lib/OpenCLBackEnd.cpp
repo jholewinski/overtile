@@ -442,7 +442,7 @@ void OpenCLBackEnd::codegenHost(std::ostream &OS) {
     OS << "    Result = Kernel.setArg(" << ArgNo++ << ", *device"
        << F->getName() << "_OutPtr);\n";
     OS << "    CLContext::throwOnError(\"Arg\", Result);\n";
-    OS << "    Result = Kernel.setArg(" << ArgNo++ << ", shared_size, NULL);\n";
+    OS << "    Result = Kernel.setArg(" << ArgNo++ << ", shared_size*sizeof(" << getTypeName(F->getElementType()) << "), NULL);\n";
     OS << "    CLContext::throwOnError(\"Arg\", Result);\n";
   }
 

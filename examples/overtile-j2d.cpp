@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
 
   OpenCLBackEnd OCL(G);
   OCL.setVerbose(true);
-  OCL.setTimeTileSize(1);
+  OCL.setTimeTileSize(2);
   OCL.run();
   
   std::cout << "Generating overtile-j2d-host.cpp\n";
