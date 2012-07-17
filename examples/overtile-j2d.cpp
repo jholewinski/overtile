@@ -6,6 +6,7 @@
 #include "overtile/OpenCLBackEnd.h"
 #include "overtile/Types.h"
 #include <iostream>
+#include <fstream>
 
 using namespace overtile;
 
@@ -47,13 +48,22 @@ int main(int argc, char** argv) {
 
   OpenCLBackEnd OCL(G);
   OCL.setVerbose(true);
-  OCL.setTimeTileSize(2);
+  OCL.setTimeTileSize(1);
   OCL.run();
   
-  std::cout << "// OpenCL Device:\n";
-  OCL.codegenDevice(std::cout);
-  std::cout << "\n\n// OpenCL Host:\n";
-  OCL.codegenHost(std::cout);
-  
+  std::cout << "Generating overtile-j2d-host.cpp\n";
+
+  {
+    std::ofstream Str("overtile-j2d-host.cpp");
+    OCL.codegenHost(Str);
+  }
+
+  std::cout << "Generating overtile-j2d-device.cl\n";
+
+  {
+    std::ofstream Str("overtile-j2d-device.cl");
+    OCL.codegenDevice(Str);
+  }
+    
   return 0;
 }

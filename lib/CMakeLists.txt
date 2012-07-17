@@ -27,3 +27,6 @@ add_library(overtile STATIC ${_sources} ${_headers})
 
 install(TARGETS overtile ARCHIVE DESTINATION lib)
 
+
+add_subdirectory(cl)
+
