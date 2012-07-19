@@ -3,6 +3,7 @@
 #include "overtile/Expressions.h"
 #include "overtile/Field.h"
 #include "overtile/Grid.h"
+#include <sstream>
 #include <cassert>
 #include <cstdlib>
 
@@ -53,6 +54,25 @@ FieldRef::~FieldRef() {
 void FieldRef::getFields(std::set<Field*> &Fields) const {
   Fields.insert(TheField);
 }
+
+
+ConstantExpr::ConstantExpr() {
+}
+
+ConstantExpr::~ConstantExpr() {
+}
+
+
+FP32Constant::FP32Constant(float V)
+  : Value(V) {
+  std::stringstream Str;
+  Str << V;
+  StringValue = Str.str();
+}
+
+FP32Constant::~FP32Constant() {
+}
+
 
 }
 

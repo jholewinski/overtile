@@ -5,6 +5,7 @@
 namespace overtile {
 
 class BinaryOp;
+class ConstantExpr;
 class ElementType;
 class Expression;
 class FieldRef;
@@ -29,6 +30,7 @@ private:
   unsigned codegenExpr(Expression *Expr, std::ostream &OS, unsigned &TempIdx);
   unsigned codegenBinaryOp(BinaryOp *Op, std::ostream &OS, unsigned &TempIdx);
   unsigned codegenFieldRef(FieldRef *Ref, std::ostream &OS, unsigned &TempIdx);
+  unsigned codegenConstant(ConstantExpr *Expr, std::ostream &OS, unsigned &TempIdx);
 };
 
 }

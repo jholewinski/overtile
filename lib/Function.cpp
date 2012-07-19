@@ -54,6 +54,8 @@ public:
       visitBinaryOp(Op);
     } else if (FieldRef *Ref = dynamic_cast<FieldRef*>(Expr)) {
       visitFieldRef(Ref);
+    } else if (ConstantExpr *C = dynamic_cast<ConstantExpr*>(Expr)) {
+      // Do nothing
     } else {
       assert(0 && "Unhandled expression type");
     }
@@ -125,6 +127,8 @@ public:
       visitBinaryOp(Op);
     } else if (FieldRef *Ref = dynamic_cast<FieldRef*>(Expr)) {
       visitFieldRef(Ref);
+    } else if (ConstantExpr *C = dynamic_cast<ConstantExpr*>(Expr)) {
+      // Do nothing
     } else {
       assert(0 && "Unhandled expression type");
     }
@@ -189,6 +193,8 @@ public:
       visitBinaryOp(Op);
     } else if (FieldRef *Ref = dynamic_cast<FieldRef*>(Expr)) {
       visitFieldRef(Ref);
+    } else if (ConstantExpr *C = dynamic_cast<ConstantExpr*>(Expr)) {
+      // Do nothing
     } else {
       assert(0 && "Unhandled expression type");
     }

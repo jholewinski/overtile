@@ -36,8 +36,9 @@ int main(int argc, char** argv) {
   Expression *T2 = new BinaryOp(BinaryOp::ADD, T1, FP1C);
   Expression *T3 = new BinaryOp(BinaryOp::ADD, T2, FCM1);
   Expression *T4 = new BinaryOp(BinaryOp::ADD, T3, FCP1);
-
-  Function *Func = new Function(F, T4);
+  Expression *T5 = new BinaryOp(BinaryOp::MUL, T4, new FP32Constant(0.2f));
+  
+  Function *Func = new Function(F, T5);
   Func->setLowerBound(0, 1);
   Func->setLowerBound(1, 1);
   Func->setUpperBound(0, 1);

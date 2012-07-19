@@ -1,6 +1,8 @@
 
 #include <vector>
 #include <set>
+#include <string>
+
 namespace overtile {
 
 class Field;
@@ -73,6 +75,39 @@ public:
 
   Field            *TheField;
   std::vector<int>  Offsets;
+};
+
+
+/**
+ * A constant value.
+ */
+class ConstantExpr : public Expression {
+public:
+  ConstantExpr();
+  virtual ~ConstantExpr();
+
+  virtual void getFields(std::set<Field*> &Fields) const {}
+  
+  virtual std::string getStringValue() const = 0;
+};
+
+
+class FP32Constant : public ConstantExpr {
+public:
+  FP32Constant(float V);
+  virtual ~FP32Constant();
+
+  virtual std::string getStringValue() const {
+    return StringValue;
+  }
+
+  float getValue() const { return Value; }
+
+private:
+  
+  float       Value;
+  std::string StringValue;
+  
 };
 
 

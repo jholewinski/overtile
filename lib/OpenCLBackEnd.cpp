@@ -516,6 +516,8 @@ unsigned OpenCLBackEnd::codegenExpr(Expression *Expr, std::ostream &OS,
     return codegenBinaryOp(Op, OS, TempIdx);
   } else if (FieldRef *Ref = dynamic_cast<FieldRef*>(Expr)) {
     return codegenFieldRef(Ref, OS, TempIdx);
+  } else if (ConstantExpr *C = dynamic_cast<ConstantExpr*>(Expr)) {
+    return codegenConstant(C, OS, TempIdx);
   } else {
     assert(0 && "Unhandled expression");
   }
@@ -583,6 +585,17 @@ unsigned OpenCLBackEnd::codegenFieldRef(FieldRef *Ref, std::ostream &OS,
   OS << "float temp" << TempIdx << " = *(" << Prefix << Name
      << " + AddrOffset);\n";
   
+  return TempIdx++;
+}
+
+unsigned OpenCLBackEnd::
+codegenConstant(ConstantExpr *Expr, std::ostream &OS, unsigned &TempIdx) {
+  if (dynamic_cast<FP32Constant*>(Expr)) {
+    OS << "  float temp" << TempIdx << " = " << Expr->getStringValue() << "f;\n";
+  } else {
+    assert(0 && "Unknown type");
+  }
+
   return TempIdx++;
 }
 
