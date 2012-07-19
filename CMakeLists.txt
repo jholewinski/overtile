@@ -10,4 +10,9 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/support/opencl/inc)
 add_subdirectory(lib)
 add_subdirectory(examples)
 
+# Create Doxyfile
+set(OVERTILE_DOC_DIR ${CMAKE_CURRENT_BINARY_DIR}/doc)
+set(OVERTILE_INCLUDE_DIR ${HEADER_DIR})
+configure_file(Doxyfile.in Doxyfile @ONLY)
+
 install(DIRECTORY include/overtile DESTINATION include)
