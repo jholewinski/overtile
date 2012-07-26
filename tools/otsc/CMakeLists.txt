@@ -6,6 +6,6 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_executable(otsc
   otsc.cpp
 )
-target_link_libraries(otsc OTCore)
+target_link_libraries(otsc OTParser OTCore)
 
 install(TARGETS otsc RUNTIME DESTINATION bin)

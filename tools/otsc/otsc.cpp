@@ -1,4 +1,6 @@
 
+#include "overtile/Parser/OTDParser.h"
+
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -6,12 +8,11 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Signals.h"
-#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/system_error.h"
 #include "llvm/Support/ToolOutputFile.h"
-#include "llvm/Support/YAMLParser.h"
 
 using namespace llvm;
+using namespace overtile;
 
 static cl::opt<std::string>
 InputFileName(cl::Positional, cl::desc("<input file>"), cl::init("-"));
@@ -47,19 +48,11 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  // Parse input
-  SourceMgr    SMgr;
-  yaml::Stream DocStream(InDoc->getBuffer(), SMgr);
 
-  // Read document
-
-  for (yaml::document_iterator I = DocStream.begin(), E = DocStream.end();
-       I != E; ++I) {
-    yaml::Node *N = I->getRoot();
-    //if (error_code ec = CDP.parse(N)) {
-    //  errs() << "Parse failed: " << ec.message() << "\n";
-    //  return 1;
-   // }
+  OwningPtr<Grid> G;
+  if (error_code ec = ParseOTD(InDoc.get(), G)) {
+    errs() << "Parsing error: " << ec.message() << "\n";
+    return 1;
   }
 
 
