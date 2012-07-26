@@ -53,6 +53,11 @@ void OpenCLBackEnd::codegenDevice(std::ostream &OS) {
   //  OS << ", int real_per_block_" << i;
   //}
 
+  for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+    OS << ", int ts_" << i;
+  }
+
+  
   OS << ") {\n";
 
   Region BlockRegion(G->getNumDimensions());
@@ -106,7 +111,7 @@ void OpenCLBackEnd::codegenDevice(std::ostream &OS) {
     
     OS << "  int max_left_offset_" << i << " = " << MaxLeft << ";\n";
     OS << "  int max_right_offset_" << i << " = " << MaxRight << ";\n";
-    OS << "  int shared_size_" << i << " = get_local_size(" << i << ") + " << (MaxLeft + MaxRight) << ";\n";
+    OS << "  int shared_size_" << i << " = ts_" << i << "*get_local_size(" << i << ") + " << (MaxLeft + MaxRight) << ";\n";
   }
 
   OS << "int AddrOffset;\n";
@@ -115,14 +120,30 @@ void OpenCLBackEnd::codegenDevice(std::ostream &OS) {
   for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
     OS << "  int local_" << i << " = get_local_id(" << i << ");\n";
     OS << "  int group_" << i << " = get_group_id(" << i << ");\n";
-    OS << "  int tid_" << i << " = group_" << i << " * real_per_block_" << i
-       << " + local_" << i << " - Halo_Left_" << i <<";\n";
+    if (i == 0) {
+      OS << "  int tid_" << i << " = group_" << i << " * real_per_block_" << i
+         << " + local_" << i << " - Halo_Left_" << i <<";\n";
+    } else {
+      OS << "  int tid_" << i << " = group_" << i << " * real_per_block_" << i
+         << " + local_" << i << "*get_local_size(" << i << ") - Halo_Left_" << i <<";\n";
+    }
     OS << "  // Early exit\n";
     OS << "  if (tid_" << i << " >= Dim_" << i << ") return;\n";
   }
 
 
   OS << "  // First time step\n";
+  for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+    OS << "  for (unsigned elem_" << i << " = 0; elem_" << i << " < ts_" << i << "; ++elem_" << i << ") {\n";
+    if (i != 0) {
+      OS << "  int thisid_" << i << " = tid_" << i << " + elem_" << i << ";\n";
+      OS << "  int thislocal_" << i << " = get_local_id(" << i << ")*ts_" << i << " + elem_" << i << ";\n";
+    } else {
+      OS << "  int thisid_" << i << " = tid_" << i << " + elem_" << i << "*get_local_size(" << i << ");\n";
+      OS << "  int thislocal_" << i << " = elem_" << i << "*ts_" << i << ";\n";
+    }
+  }
+  
   InTS0 = true;
   for (std::list<Function*>::iterator I = Functions.begin(),
          E = Functions.end(); I != E; ++I) {
@@ -133,7 +154,7 @@ void OpenCLBackEnd::codegenDevice(std::ostream &OS) {
     OS << "  if (";
     for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
       if (i != 0) OS << " && ";
-      OS << "(tid_" << i << " >= " << Bounds[i].first << " && tid_" << i
+      OS << "(thisid_" << i << " >= " << Bounds[i].first << " && thisid_" << i
          << " < Dim_" << i << " - " << Bounds[i].second << ")";
     }
     OS << ") {\n";
@@ -152,7 +173,7 @@ void OpenCLBackEnd::codegenDevice(std::ostream &OS) {
     unsigned Dim = 0;
     for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
       if (i != 0) OS << " + ";
-      OS << "(get_local_id(" << i << ")+max_left_offset_" << i << ")";
+      OS << "(thislocal_" << i << "+max_left_offset_" << i << ")";
       for (unsigned i = 0; i < DimTerms; ++i) {
         OS << "*shared_size_" << i;
       }
@@ -170,7 +191,7 @@ void OpenCLBackEnd::codegenDevice(std::ostream &OS) {
     Dim = 0;
     for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
       if (i != 0) OS << " + ";
-      OS << "(get_local_id(" << i << ")+max_left_offset_" << i << ")";
+      OS << "(thislocal_" << i << "+max_left_offset_" << i << ")";
       for (unsigned i = 0; i < DimTerms; ++i) {
         OS << "*shared_size_" << i;
       }
@@ -185,10 +206,26 @@ void OpenCLBackEnd::codegenDevice(std::ostream &OS) {
   }
 
   OS << "  barrier(CLK_LOCAL_MEM_FENCE);\n";
-
+  for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+    OS << "  }\n";
+  }
+  
   OS << "  // Remaining time steps\n";
   InTS0 = false;
   OS << "  for (int t = 1; t < " << getTimeTileSize() << "; ++t) {\n";
+
+  for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+    OS << "  for (unsigned elem_" << i << " = 0; elem_" << i << " < ts_" << i << "; ++elem_" << i << ") {\n";
+    if (i != 0) {
+      OS << "  int thisid_" << i << " = tid_" << i << " + elem_" << i << ";\n";
+      OS << "  int thislocal_" << i << " = get_local_id(" << i << ")*ts_" << i << " + elem_" << i << ";\n";
+    } else {
+      OS << "  int thisid_" << i << " = tid_" << i << " + elem_" << i << "*get_local_size(" << i << ");\n";
+      OS << "  int thislocal_" << i << " = elem_" << i << "*ts_" << i << ";\n";
+    }
+  }
+
+
   for (std::list<Function*>::iterator I = Functions.begin(),
          E = Functions.end(); I != E; ++I) {
     Function *F = *I;
@@ -207,9 +244,9 @@ void OpenCLBackEnd::codegenDevice(std::ostream &OS) {
     OS << "      if (";
     for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
       if (i != 0) OS << " && ";
-      OS << "(get_local_id(" << i << ") >= Halo_Left_" << i
-         << " && get_local_id(" << i << ") < get_local_size(" << i
-         << ") - Halo_Right_" << i << ")";
+      OS << "(thislocal_" << i << " >= Halo_Left_" << i
+         << " && thislocal_" << i << " < get_local_size(" << i
+         << ")*ts_" << i << " - Halo_Right_" << i << ")";
     }
     OS << ") {\n";
 
@@ -220,7 +257,7 @@ void OpenCLBackEnd::codegenDevice(std::ostream &OS) {
     unsigned Dim = 0;
     for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
       if (i != 0) OS << " + ";
-      OS << "tid_" << i;
+      OS << "thisid_" << i;
       for (unsigned i = 0; i < DimTerms; ++i) {
         OS << "*Dim_" << i;
       }
@@ -244,7 +281,7 @@ void OpenCLBackEnd::codegenDevice(std::ostream &OS) {
     Dim = 0;
     for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
       if (i != 0) OS << " + ";
-      OS << "(get_local_id(" << i << ")+max_left_offset_" << i << ")";
+      OS << "(thislocal_" << i << "+max_left_offset_" << i << ")";
       for (unsigned i = 0; i < DimTerms; ++i) {
         OS << "*shared_size_" << i;
       }
@@ -252,13 +289,19 @@ void OpenCLBackEnd::codegenDevice(std::ostream &OS) {
       ++Dim;
     }
     OS << ";\n";
+    OS << "      barrier(CLK_LOCAL_MEM_FENCE);\n";
     OS << "*(Shared_" << Out->getName() << " + AddrOffset) = temp_" << Out->getName() << ";\n";
 
     
     OS << "      barrier(CLK_LOCAL_MEM_FENCE);\n";
     OS << "    }\n";
   }
-  OS << "}\n";  
+  OS << "}\n";
+
+  for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+    OS << "  }\n";
+  }
+
   OS << "  }\n";
 
 
@@ -299,7 +342,11 @@ void OpenCLBackEnd::codegenHost(std::ostream &OS) {
   for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
     OS << ", int BlockDim_" << i;
   }
-  
+
+  for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+    OS << ", int ts_" << i;
+  }
+
   OS << ") {\n";
 
 
@@ -367,7 +414,7 @@ void OpenCLBackEnd::codegenHost(std::ostream &OS) {
 
 
   for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
-    OS << "  int real_per_block_" << i << " = BlockDim_" << i
+    OS << "  int real_per_block_" << i << " = ts_" << i << "*BlockDim_" << i
        << " - Halo_Left_" << i << " - Halo_Right_" << i << ";\n";
     OS << "  assert(real_per_block_" << i << " > 0);\n";
   }
@@ -391,8 +438,9 @@ void OpenCLBackEnd::codegenHost(std::ostream &OS) {
         MaxRight = std::max(MaxRight, RightOffset);
       }
     }
+
     
-    OS << "  int shared_size_" << i << " = BlockDim_" << i << " + " << (MaxLeft + MaxRight) << ";\n";
+    OS << "  int shared_size_" << i << " = ts_" << i << "*BlockDim_" << i << " + " << (MaxLeft + MaxRight) << ";\n";
   }
 
 
@@ -452,6 +500,12 @@ void OpenCLBackEnd::codegenHost(std::ostream &OS) {
     OS << "    Result = Kernel.setArg(" << ArgNo++ << ", Dim_" << i << ");\n";
     OS << "    CLContext::throwOnError(\"Arg\", Result);\n";
   }
+
+  for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+    OS << "    Result = Kernel.setArg(" << ArgNo++ << ", ts_" << i << ");\n";
+    OS << "    CLContext::throwOnError(\"Arg\", Result);\n";
+  }
+
 
   OS << "    Result = Queue.enqueueNDRangeKernel(Kernel, cl::NullRange, global_size, local_size, 0, &WaitEvent);\n";
   OS << "    CLContext::throwOnError(\"Launch\", Result);\n";
@@ -562,14 +616,14 @@ unsigned OpenCLBackEnd::codegenFieldRef(FieldRef *Ref, std::ostream &OS,
     int Offset = *I;
     if (B != I) OS << " + ";
     if (InTS0)
-      OS << "(tid_" << Dim << "+" << *I << ")";
+      OS << "(thisid_" << Dim << "+" << *I << ")";
     else
-      OS << "((get_local_id(" << Dim << ")+" << *I << ")+max_left_offset_" << Dim << ")";
+      OS << "((thislocal_" << Dim << "+" << *I << ")+max_left_offset_" << Dim << ")";
     for (unsigned i = 0; i < DimTerms; ++i) {
       if (InTS0)
         OS << "*Dim_" << i;
       else
-        OS << "*get_local_size(" << i << ")";
+        OS << "*thislocal_" << i << "";
     }
     ++DimTerms;
     ++Dim;
