@@ -1,6 +1,6 @@
 
-#include "overtile/Field.h"
-#include "overtile/Grid.h"
+#include "overtile/Core/Field.h"
+#include "overtile/Core/Grid.h"
 #include <cassert>
 #include <cstdlib>
 

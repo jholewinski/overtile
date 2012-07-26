@@ -1,7 +1,6 @@
 
 add_llvm_library(OTCore
   BackEnd.cpp
-  CGExpressions.cpp
   Error.cpp
   Expressions.cpp
   Field.cpp

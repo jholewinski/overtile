@@ -1,10 +1,10 @@
 
-#include "overtile/OpenCLBackEnd.h"
-#include "overtile/Expressions.h"
-#include "overtile/Field.h"
-#include "overtile/Function.h"
-#include "overtile/Grid.h"
-#include "overtile/Types.h"
+#include "overtile/Core/OpenCLBackEnd.h"
+#include "overtile/Core/Expressions.h"
+#include "overtile/Core/Field.h"
+#include "overtile/Core/Function.h"
+#include "overtile/Core/Grid.h"
+#include "overtile/Core/Types.h"
 #include <cassert>
 #include <cmath>
 
