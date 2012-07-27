@@ -1,9 +1,13 @@
 
 #include "overtile/Core/Grid.h"
+#include "overtile/Core/Field.h"
 #include <algorithm>
 #include <cassert>
 
 namespace overtile {
+
+Grid::Grid() : Dimensions(1) {
+}
 
 Grid::Grid(unsigned Dim) : Dimensions(Dim) {
 }
@@ -23,6 +27,17 @@ void Grid::appendFunction(Function *F) {
   assert(std::find(Functions.begin(), Functions.end(), F) == Functions.end() &&
          "F is already attached to the grid");
   Functions.push_back(F);
+}
+
+Field *Grid::getFieldByName(llvm::StringRef Name) {
+  for (FieldList::iterator I = Fields.begin(), E = Fields.end(); I != E; ++I) {
+    Field *F = *I;
+    if (Name.equals(F->getName().c_str())) {
+      return F;
+    }
+  }
+
+  return NULL;
 }
 
 }

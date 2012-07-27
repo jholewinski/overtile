@@ -30,14 +30,14 @@ void BinaryOp::getFields(std::set<Field*> &Fields) const {
   RHS->getFields(Fields);
 }
 
-FieldRef::FieldRef(Field *F, const std::vector<int>& Off)
+FieldRef::FieldRef(Field *F, const std::vector<IntConstant*>& Off)
   : TheField(F), Offsets(Off) {
   assert(F != NULL && "F cannot be NULL");
   assert(Off.size() == F->getGrid()->getNumDimensions() &&
          "Mismatch between number of offsets and grid dimensionality");
 }
 
-FieldRef::FieldRef(Field *F, int NumOffsets, const int Off[])
+FieldRef::FieldRef(Field *F, int NumOffsets, IntConstant* Off[])
   : TheField(F) {
   assert(F != NULL && "F cannot be NULL");
   assert(NumOffsets == F->getGrid()->getNumDimensions() &&
@@ -71,6 +71,17 @@ FP32Constant::FP32Constant(float V)
 }
 
 FP32Constant::~FP32Constant() {
+}
+
+
+IntConstant::IntConstant(int V)
+  : Value(V) {
+  std::stringstream Str;
+  Str << V;
+  StringValue = Str.str();
+}
+
+IntConstant::~IntConstant() {
 }
 
 

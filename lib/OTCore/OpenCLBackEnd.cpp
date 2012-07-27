@@ -597,7 +597,7 @@ unsigned OpenCLBackEnd::codegenBinaryOp(BinaryOp *Op, std::ostream &OS,
 unsigned OpenCLBackEnd::codegenFieldRef(FieldRef *Ref, std::ostream &OS,
                                         unsigned &TempIdx) {
   Field *F = Ref->getField();
-  const std::vector<int> Offsets = Ref->getOffsets();
+  const std::vector<IntConstant*> Offsets = Ref->getOffsets();
 
   std::string Prefix;
   
@@ -611,9 +611,9 @@ unsigned OpenCLBackEnd::codegenFieldRef(FieldRef *Ref, std::ostream &OS,
   unsigned DimTerms = 0;
 
   unsigned Dim = 0;
-  for (std::vector<int>::const_iterator I = Offsets.begin(),
+  for (std::vector<IntConstant*>::const_iterator I = Offsets.begin(),
          E = Offsets.end(), B = I; I != E; ++I) {
-    int Offset = *I;
+    int Offset = (*I)->getValue();
     if (B != I) OS << " + ";
     if (InTS0)
       OS << "(thisid_" << Dim << "+" << *I << ")";

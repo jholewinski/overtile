@@ -1,6 +1,8 @@
 
+#include "llvm/ADT/StringRef.h"
 #include <vector>
 #include <set>
+#include <string>
 
 namespace overtile {
 
@@ -50,14 +52,18 @@ public:
   Expression *getExpression() { return Expr; }
   const Expression *getExpression() const { return Expr; }
 
+  const std::string &getName() const { return Name; }
+  void setName(llvm::StringRef N) { Name = N.data(); }
+
   const std::vector<std::pair<unsigned, unsigned> >
   &getBounds() const { return Bounds; }
 
 private:
 
-  Field      *OutField;
-  Expression *Expr;
+  Field       *OutField;
+  Expression  *Expr;
   std::vector<std::pair<unsigned, unsigned> > Bounds;
+  std::string  Name;
 };
 
 }

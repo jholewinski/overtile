@@ -74,14 +74,14 @@ public:
       return;
     }
 
-    unsigned                NumDims = InRegion.getNumDimensions();
-    Region                  NewR(NumDims);
-    const std::vector<int> &Offsets = Ref->getOffsets();
+    unsigned                         NumDims = InRegion.getNumDimensions();
+    Region                           NewR(NumDims);
+    const std::vector<IntConstant*> &Offsets = Ref->getOffsets();
 
     for (unsigned i = 0; i < NumDims; ++i) {
       std::pair<int, unsigned> InBound = InRegion.getBound(i);
       std::pair<int, unsigned> FBound  = FRegion.getBound(i);
-      int                      Off     = Offsets[i];
+      int                      Off     = Offsets[i]->getValue();
       
       if (InBound.first + Off < FBound.first) {
         // We need more elements on the lower bound
@@ -147,10 +147,10 @@ public:
       return;
     }
 
-    const std::vector<int> &Offsets = Ref->getOffsets();
+    const std::vector<IntConstant*> &Offsets = Ref->getOffsets();
     assert(Dim < Offsets.size() && "Not enough offsets");
 
-    int Off = Offsets[Dim];
+    int Off = Offsets[Dim]->getValue();
     
     if (Off < 0) {
       unsigned Abs = -Off;

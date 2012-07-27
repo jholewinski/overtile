@@ -54,14 +54,15 @@ private:
   Expression *RHS;
 };
 
+class IntConstant;
 
 /**
  * A field reference expression.
  */
 class FieldRef : public Expression {
 public:
-  FieldRef(Field *F, const std::vector<int>& Off);
-  FieldRef(Field *F, int NumOffsets, const int Off[]);
+  FieldRef(Field *F, const std::vector<IntConstant*>& Off);
+  FieldRef(Field *F, int NumOffsets, IntConstant* Off[]);
   virtual ~FieldRef();
 
   virtual void getFields(std::set<Field*> &Fields) const;
@@ -69,12 +70,12 @@ public:
   Field *getField() { return TheField; }
   const Field *getField() const { return TheField; }
 
-  const std::vector<int> &getOffsets() const { return Offsets; }
+  const std::vector<IntConstant*> &getOffsets() const { return Offsets; }
 
 public:
 
-  Field            *TheField;
-  std::vector<int>  Offsets;
+  Field                     *TheField;
+  std::vector<IntConstant*>  Offsets;
 };
 
 
@@ -110,5 +111,24 @@ private:
   
 };
 
+
+class IntConstant : public ConstantExpr {
+public:
+  IntConstant(int V);
+  virtual ~IntConstant();
+
+  virtual std::string getStringValue() const {
+    return StringValue;
+  }
+
+  int getValue() const { return Value; }
+
+private:
+  
+  int         Value;
+  std::string StringValue;
+  
+};
+  
 
 }

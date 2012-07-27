@@ -1,4 +1,5 @@
 
+#include "llvm/ADT/StringRef.h"
 #include <list>
 
 namespace overtile {
@@ -11,6 +12,7 @@ class Function;
  */
 class Grid {
 public:
+  Grid();
   Grid(unsigned Dim);
   ~Grid();
 
@@ -22,11 +24,18 @@ public:
   void appendFunction(Function *F);
   
   //==-- Accessors --========================================================= //
+  
   unsigned getNumDimensions() const { return Dimensions; }
+  void setNumDimensions(unsigned Dim) { Dimensions = Dim; }
+
+  const std::string &getName() const { return Name; }
+  void setName(llvm::StringRef N) { Name = N; }
 
   const std::list<Field*> &getFieldList() const { return Fields; }
   
   const std::list<Function*> &getFunctionList() const { return Functions; }
+
+  Field *getFieldByName(llvm::StringRef Name);
   
 private:
 
@@ -39,6 +48,8 @@ private:
   FieldList    Fields;
   /// Functions assigned to this grid.
   FunctionList Functions;
+  /// Name of the grid (program)
+  std::string  Name;
 };
 
 }
