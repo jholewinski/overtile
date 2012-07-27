@@ -6,6 +6,7 @@
 #include "overtile/Core/Grid.h"
 #include "overtile/Core/Types.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cmath>
 
@@ -475,8 +476,8 @@ void OpenCLBackEnd::codegenHost(llvm::raw_ostream &OS) {
   OS << ");\n";
 
   
-  OS << "  std::cout << \"Global: \" << ((const size_t*)global_size)[0] << \", \" << ((const size_t*)global_size)[1] << \"\\n\";\n";
-  OS << "  std::cout << \"Local: \" << ((const size_t*)local_size)[0] << \", \" << (( const size_t*)local_size)[1] << \"\\n\";\n";
+  //OS << "  std::cout << \"Global: \" << ((const size_t*)global_size)[0] << \", \" << ((const size_t*)global_size)[1] << \"\\n\";\n";
+  //OS << "  std::cout << \"Local: \" << ((const size_t*)local_size)[0] << \", \" << (( const size_t*)local_size)[1] << \"\\n\";\n";
   
   OS << "  cl::Event WaitEvent;\n";
 
@@ -563,7 +564,7 @@ std::string OpenCLBackEnd::getTypeName(const ElementType *Ty) {
   if (const FP32Type *FPTy = dyn_cast<const FP32Type>(Ty)) {
     return "float";
   } else {
-    assert(0 && "Unknown type");
+    llvm_unreachable("Unknown type");
   }
 }
 
@@ -576,7 +577,7 @@ unsigned OpenCLBackEnd::codegenExpr(Expression *Expr, llvm::raw_ostream &OS,
   } else if (ConstantExpr *C = dyn_cast<ConstantExpr>(Expr)) {
     return codegenConstant(C, OS, TempIdx);
   } else {
-    assert(0 && "Unhandled expression");
+    llvm_unreachable("Unhandled expression");
   }
 }
 
