@@ -18,8 +18,8 @@ public:
   OpenCLBackEnd(Grid *G);
   virtual ~OpenCLBackEnd();
 
-  virtual void codegenDevice(std::ostream &OS);
-  virtual void codegenHost(std::ostream &OS);
+  virtual void codegenDevice(llvm::raw_ostream &OS);
+  virtual void codegenHost(llvm::raw_ostream &OS);
 
 private:
 
@@ -27,10 +27,10 @@ private:
   
   static std::string getTypeName(const ElementType *Ty);
 
-  unsigned codegenExpr(Expression *Expr, std::ostream &OS, unsigned &TempIdx);
-  unsigned codegenBinaryOp(BinaryOp *Op, std::ostream &OS, unsigned &TempIdx);
-  unsigned codegenFieldRef(FieldRef *Ref, std::ostream &OS, unsigned &TempIdx);
-  unsigned codegenConstant(ConstantExpr *Expr, std::ostream &OS, unsigned &TempIdx);
+  unsigned codegenExpr(Expression *Expr, llvm::raw_ostream &OS, unsigned &TempIdx);
+  unsigned codegenBinaryOp(BinaryOp *Op, llvm::raw_ostream &OS, unsigned &TempIdx);
+  unsigned codegenFieldRef(FieldRef *Ref, llvm::raw_ostream &OS, unsigned &TempIdx);
+  unsigned codegenConstant(ConstantExpr *Expr, llvm::raw_ostream &OS, unsigned &TempIdx);
 };
 
 }

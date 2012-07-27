@@ -4,9 +4,12 @@
 #include "overtile/Core/Field.h"
 #include "overtile/Core/Grid.h"
 #include "overtile/Core/Region.h"
+#include "llvm/Support/Casting.h"
 #include <iostream>
 #include <cassert>
 #include <cstdlib>
+
+using namespace llvm;
 
 namespace overtile {
 
@@ -50,11 +53,11 @@ public:
     : TheField(F), FRegion (FReg), InRegion(InReg) {}
 
   void visitExpr(Expression *Expr) {
-    if (BinaryOp *Op = dynamic_cast<BinaryOp*>(Expr)) {
+    if (BinaryOp *Op = dyn_cast<BinaryOp>(Expr)) {
       visitBinaryOp(Op);
-    } else if (FieldRef *Ref = dynamic_cast<FieldRef*>(Expr)) {
+    } else if (FieldRef *Ref = dyn_cast<FieldRef>(Expr)) {
       visitFieldRef(Ref);
-    } else if (ConstantExpr *C = dynamic_cast<ConstantExpr*>(Expr)) {
+    } else if (ConstantExpr *C = dyn_cast<ConstantExpr>(Expr)) {
       // Do nothing
     } else {
       assert(0 && "Unhandled expression type");
@@ -123,11 +126,11 @@ public:
     : TheField(F), Dim(D), Left(LeftMax), Right(RightMax) {}
 
   void visitExpr(Expression *Expr) {
-    if (BinaryOp *Op = dynamic_cast<BinaryOp*>(Expr)) {
+    if (BinaryOp *Op = dyn_cast<BinaryOp>(Expr)) {
       visitBinaryOp(Op);
-    } else if (FieldRef *Ref = dynamic_cast<FieldRef*>(Expr)) {
+    } else if (FieldRef *Ref = dyn_cast<FieldRef>(Expr)) {
       visitFieldRef(Ref);
-    } else if (ConstantExpr *C = dynamic_cast<ConstantExpr*>(Expr)) {
+    } else if (ConstantExpr *C = dyn_cast<ConstantExpr>(Expr)) {
       // Do nothing
     } else {
       assert(0 && "Unhandled expression type");
@@ -189,11 +192,11 @@ public:
     : Flops(0.0) {}
 
   void visitExpr(Expression *Expr) {
-    if (BinaryOp *Op = dynamic_cast<BinaryOp*>(Expr)) {
+    if (BinaryOp *Op = dyn_cast<BinaryOp>(Expr)) {
       visitBinaryOp(Op);
-    } else if (FieldRef *Ref = dynamic_cast<FieldRef*>(Expr)) {
+    } else if (FieldRef *Ref = dyn_cast<FieldRef>(Expr)) {
       visitFieldRef(Ref);
-    } else if (ConstantExpr *C = dynamic_cast<ConstantExpr*>(Expr)) {
+    } else if (ConstantExpr *C = dyn_cast<ConstantExpr>(Expr)) {
       // Do nothing
     } else {
       assert(0 && "Unhandled expression type");

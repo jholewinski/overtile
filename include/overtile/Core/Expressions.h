@@ -12,10 +12,24 @@ class Field;
  */
 class Expression {
 public:
-  Expression();
+  enum ExprKind {
+    BinOp,
+    FieldRef,
+    IntConst,
+    FP32Const
+  };
+  
+  Expression(unsigned ClassType);
   virtual ~Expression();
 
   virtual void getFields(std::set<Field*> &Fields) const = 0;
+
+  unsigned getClassType() const { return ClassType; }
+  static inline bool classof(const Expression*) { return true; }
+  
+private:
+
+  ExprKind ClassType;
 };
 
 
@@ -47,6 +61,11 @@ public:
 
   Expression *getRHS() { return RHS; }
   const Expression *getRHS() const { return RHS; }
+
+  static inline bool classof(const BinaryOp*) { return true; }
+  static inline bool classof(const Expression* E) {
+    return E->getClassType() == Expression::BinOp;
+  }
   
 private:
   Operator    Op;
@@ -72,6 +91,11 @@ public:
 
   const std::vector<IntConstant*> &getOffsets() const { return Offsets; }
 
+  static inline bool classof(const FieldRef*) { return true; }
+  static inline bool classof(const Expression* E) {
+    return E->getClassType() == Expression::FieldRef;
+  }
+  
 public:
 
   Field                     *TheField;
@@ -84,12 +108,18 @@ public:
  */
 class ConstantExpr : public Expression {
 public:
-  ConstantExpr();
+  ConstantExpr(unsigned ExKind);
   virtual ~ConstantExpr();
 
   virtual void getFields(std::set<Field*> &Fields) const {}
   
   virtual std::string getStringValue() const = 0;
+
+  static inline bool classof(const ConstantExpr*) { return true; }
+  static inline bool classof(const Expression* E) {
+    return E->getClassType() == Expression::IntConst ||
+           E->getClassType() == Expression::FP32Const;
+  }
 };
 
 
@@ -104,6 +134,11 @@ public:
 
   float getValue() const { return Value; }
 
+  static inline bool classof(const FP32Constant*) { return true; }
+  static inline bool classof(const Expression* E) {
+    return E->getClassType() == Expression::FP32Const;
+  }
+  
 private:
   
   float       Value;
@@ -123,6 +158,11 @@ public:
 
   int getValue() const { return Value; }
 
+  static inline bool classof(const IntConstant*) { return true; }
+  static inline bool classof(const Expression* E) {
+    return E->getClassType() == Expression::IntConst;
+  }
+  
 private:
   
   int         Value;

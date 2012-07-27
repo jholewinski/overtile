@@ -1,5 +1,6 @@
 
 #include "overtile/Parser/OTDParser.h"
+#include "overtile/Core/OpenCLBackEnd.h"
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -18,9 +19,17 @@ static cl::opt<std::string>
 InputFileName(cl::Positional, cl::desc("<input file>"), cl::init("-"));
 
 static cl::opt<std::string>
-OutputFileName("o", cl::desc("Specify output filename"),
-               cl::value_desc("filename"));
+OutputDevFileName("dev", cl::desc("Specify output filename"),
+                  cl::value_desc("filename"));
 
+static cl::opt<std::string>
+OutputHostFileName("host", cl::desc("Specify output filename"),
+                  cl::value_desc("filename"));
+
+
+static cl::opt<unsigned>
+TimeTileSize("time-tile", cl::desc("Specify time tile size"),
+             cl::value_desc("N"));
 
 namespace {
 void PrintVersion() {
@@ -56,21 +65,37 @@ int main(int argc, char **argv) {
   }
 
 
-  // Write out the binary
-  std::string ElfErr;
-  OwningPtr<tool_output_file> Out(
-    new tool_output_file(OutputFileName.c_str(), ElfErr));
-  if (!ElfErr.empty()) {
-    errs() << ElfErr << "\n";
+  // Write out result
+
+  OpenCLBackEnd OCL(G.get());
+  OCL.setTimeTileSize(TimeTileSize);
+  OCL.run();
+  
+  std::string Err;
+
+  OwningPtr<tool_output_file> HostOut(
+    new tool_output_file(OutputHostFileName.c_str(), Err));
+  if (!Err.empty()) {
+    errs() << Err << "\n";
     return 1;
   }
-                         
-  //if (error_code ec = CDP.getCudaElfFile().write(Out->os())) {
-  //  errs() << "ELF output failed: " << ec.message() << "\n";
-  //  return 1;
-  //}
 
-  Out->keep();
+  OCL.codegenHost(HostOut->os());
+
+
+  OwningPtr<tool_output_file> DevOut(
+    new tool_output_file(OutputDevFileName.c_str(), Err));
+  if (!Err.empty()) {
+    errs() << Err << "\n";
+    return 1;
+  }
+
+  OCL.codegenDevice(DevOut->os());
+
+  
+
+  HostOut->keep();
+  DevOut->keep();
 
   return 0;
 }

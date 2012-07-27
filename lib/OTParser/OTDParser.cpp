@@ -539,10 +539,10 @@ error_code OTDParser::parseExpr(Lexer &L, Expression **Expr,
     BinaryOp::Operator Op;
     switch (TokenTy) {
     default: llvm_unreachable("Unhandled operator");
-    case TOKEN_PLUS:     Op = BinaryOp::ADD;
-    case TOKEN_MINUS:    Op = BinaryOp::SUB;
-    case TOKEN_ASTERISK: Op = BinaryOp::MUL;
-    case TOKEN_SLASH:    Op = BinaryOp::DIV;
+    case TOKEN_PLUS:     Op = BinaryOp::ADD; break;
+    case TOKEN_MINUS:    Op = BinaryOp::SUB; break;
+    case TOKEN_ASTERISK: Op = BinaryOp::MUL; break;
+    case TOKEN_SLASH:    Op = BinaryOp::DIV; break;
     }
 
     *Expr = new BinaryOp(Op, LHS, RHS);

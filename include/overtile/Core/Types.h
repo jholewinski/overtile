@@ -8,11 +8,22 @@ namespace overtile {
  */
 class ElementType {
 public:
-  ElementType();
+  enum TypeKind {
+    FP32
+  };
+  
+  ElementType(unsigned Type);
   virtual ~ElementType();
 
   /// getTypeName - Returns a canonical name for the type.
   virtual std::string getTypeName() const = 0;
+
+  unsigned getClassType() const { return ClassType; }
+  static inline bool classof(const ElementType*) { return true; }
+  
+private:
+
+  unsigned ClassType;
 };
 
 
@@ -21,8 +32,13 @@ public:
  */
 class ScalarType : public ElementType {
 public:
-  ScalarType();
+  ScalarType(unsigned Type);
   virtual ~ScalarType();
+
+  static inline bool classof(const ScalarType*) { return true; }
+  static inline bool classof(const ElementType* Ty) {
+    return Ty->getClassType() == ElementType::FP32;
+  }
 };
 
 
@@ -36,6 +52,11 @@ public:
 
   /// getTypeName - Returns a canonical name for the type.
   virtual std::string getTypeName() const;
+
+  static inline bool classof(const FP32Type*) { return true; }
+  static inline bool classof(const ElementType* Ty) {
+    return Ty->getClassType() == ElementType::FP32;
+  }
 };
 
 }

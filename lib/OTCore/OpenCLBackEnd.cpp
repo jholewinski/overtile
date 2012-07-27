@@ -5,8 +5,11 @@
 #include "overtile/Core/Function.h"
 #include "overtile/Core/Grid.h"
 #include "overtile/Core/Types.h"
+#include "llvm/Support/Casting.h"
 #include <cassert>
 #include <cmath>
+
+using namespace llvm;
 
 namespace overtile {
 
@@ -17,7 +20,7 @@ OpenCLBackEnd::OpenCLBackEnd(Grid *G)
 OpenCLBackEnd::~OpenCLBackEnd() {
 }
 
-void OpenCLBackEnd::codegenDevice(std::ostream &OS) {
+void OpenCLBackEnd::codegenDevice(llvm::raw_ostream &OS) {
 
   Grid *G = getGrid();
   std::list<Function*> Functions = G->getFunctionList();
@@ -309,7 +312,7 @@ void OpenCLBackEnd::codegenDevice(std::ostream &OS) {
   OS << "} // End of kernel\n";
 }
 
-void OpenCLBackEnd::codegenHost(std::ostream &OS) {
+void OpenCLBackEnd::codegenHost(llvm::raw_ostream &OS) {
   Grid *G = getGrid();
   std::list<Function*> Functions = G->getFunctionList();
 
@@ -557,27 +560,27 @@ void OpenCLBackEnd::codegenHost(std::ostream &OS) {
 
 
 std::string OpenCLBackEnd::getTypeName(const ElementType *Ty) {
-  if (const FP32Type *FPTy = dynamic_cast<const FP32Type*>(Ty)) {
+  if (const FP32Type *FPTy = dyn_cast<const FP32Type>(Ty)) {
     return "float";
   } else {
     assert(0 && "Unknown type");
   }
 }
 
-unsigned OpenCLBackEnd::codegenExpr(Expression *Expr, std::ostream &OS,
+unsigned OpenCLBackEnd::codegenExpr(Expression *Expr, llvm::raw_ostream &OS,
                                     unsigned &TempIdx) {
-  if (BinaryOp *Op = dynamic_cast<BinaryOp*>(Expr)) {
+  if (BinaryOp *Op = dyn_cast<BinaryOp>(Expr)) {
     return codegenBinaryOp(Op, OS, TempIdx);
-  } else if (FieldRef *Ref = dynamic_cast<FieldRef*>(Expr)) {
+  } else if (FieldRef *Ref = dyn_cast<FieldRef>(Expr)) {
     return codegenFieldRef(Ref, OS, TempIdx);
-  } else if (ConstantExpr *C = dynamic_cast<ConstantExpr*>(Expr)) {
+  } else if (ConstantExpr *C = dyn_cast<ConstantExpr>(Expr)) {
     return codegenConstant(C, OS, TempIdx);
   } else {
     assert(0 && "Unhandled expression");
   }
 }
 
-unsigned OpenCLBackEnd::codegenBinaryOp(BinaryOp *Op, std::ostream &OS,
+unsigned OpenCLBackEnd::codegenBinaryOp(BinaryOp *Op, llvm::raw_ostream &OS,
                                         unsigned &TempIdx) {
   unsigned L = codegenExpr(Op->getLHS(), OS, TempIdx);
   unsigned R = codegenExpr(Op->getRHS(), OS, TempIdx);
@@ -594,7 +597,7 @@ unsigned OpenCLBackEnd::codegenBinaryOp(BinaryOp *Op, std::ostream &OS,
   return TempIdx++;
 }
 
-unsigned OpenCLBackEnd::codegenFieldRef(FieldRef *Ref, std::ostream &OS,
+unsigned OpenCLBackEnd::codegenFieldRef(FieldRef *Ref, llvm::raw_ostream &OS,
                                         unsigned &TempIdx) {
   Field *F = Ref->getField();
   const std::vector<IntConstant*> Offsets = Ref->getOffsets();
@@ -616,9 +619,9 @@ unsigned OpenCLBackEnd::codegenFieldRef(FieldRef *Ref, std::ostream &OS,
     int Offset = (*I)->getValue();
     if (B != I) OS << " + ";
     if (InTS0)
-      OS << "(thisid_" << Dim << "+" << *I << ")";
+      OS << "(thisid_" << Dim << "+" << (*I)->getValue() << ")";
     else
-      OS << "((thislocal_" << Dim << "+" << *I << ")+max_left_offset_" << Dim << ")";
+      OS << "((thislocal_" << Dim << "+" << (*I)->getValue() << ")+max_left_offset_" << Dim << ")";
     for (unsigned i = 0; i < DimTerms; ++i) {
       if (InTS0)
         OS << "*Dim_" << i;
@@ -643,8 +646,8 @@ unsigned OpenCLBackEnd::codegenFieldRef(FieldRef *Ref, std::ostream &OS,
 }
 
 unsigned OpenCLBackEnd::
-codegenConstant(ConstantExpr *Expr, std::ostream &OS, unsigned &TempIdx) {
-  if (dynamic_cast<FP32Constant*>(Expr)) {
+codegenConstant(ConstantExpr *Expr, llvm::raw_ostream &OS, unsigned &TempIdx) {
+  if (dyn_cast<FP32Constant>(Expr)) {
     OS << "  float temp" << TempIdx << " = " << Expr->getStringValue() << "f;\n";
   } else {
     assert(0 && "Unknown type");

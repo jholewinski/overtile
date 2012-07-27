@@ -4,21 +4,24 @@
 
 namespace overtile {
 
-ElementType::ElementType() {
+ElementType::ElementType(unsigned Type)
+  : ClassType(Type) {
 }
 
 ElementType::~ElementType() {
 }
 
 
-ScalarType::ScalarType() {
+ScalarType::ScalarType(unsigned Type)
+  : ElementType(Type) {
 }
 
 ScalarType::~ScalarType() {
 }
 
 
-FP32Type::FP32Type() {
+FP32Type::FP32Type()
+  : ScalarType(ElementType::FP32) {
 }
 
 FP32Type::~FP32Type() {

@@ -1,5 +1,6 @@
 
 #include "overtile/Core/Region.h"
+#include "llvm/Support/raw_ostream.h"
 #include <list>
 #include <map>
 #include <ostream>
@@ -22,10 +23,10 @@ public:
   void run();
   
   /// codegenDevice - Generate the final code for the device.
-  virtual void codegenDevice(std::ostream &OS) = 0;
+  virtual void codegenDevice(llvm::raw_ostream &OS) = 0;
 
   /// codegenHost - Generate the final code for the host.
-  virtual void codegenHost(std::ostream &OS) = 0;
+  virtual void codegenHost(llvm::raw_ostream &OS) = 0;
 
   //==-- Accessors --=========================================================//
   
