@@ -168,7 +168,7 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
     
     OS << "  int max_left_offset_" << i << " = " << MaxLeft << ";\n";
     OS << "  int max_right_offset_" << i << " = " << MaxRight << ";\n";
-    OS << "  int shared_size_" << i << " = ts_" << i << "*threadIdx." << getDimensionIndex(i) << " + " << (MaxLeft + MaxRight) << ";\n";
+    OS << "  int shared_size_" << i << " = ts_" << i << "*blockDim." << getDimensionIndex(i) << " + " << (MaxLeft + MaxRight) << ";\n";
   }
 
   OS << "int AddrOffset;\n";
@@ -182,7 +182,7 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
          << " + local_" << i << " - Halo_Left_" << i <<";\n";
     } else {
       OS << "  int tid_" << i << " = group_" << i << " * real_per_block_" << i
-         << " + local_" << i << "*get_local_size(" << i << ") - Halo_Left_" << i <<";\n";
+         << " + local_" << i << "*" << getElements(i) << " - Halo_Left_" << i <<";\n";
     }
     //OS << "  // Early exit\n";
     //OS << "  if (tid_" << i << " >= Dim_" << i << ") return;\n";
@@ -223,7 +223,7 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
 
     OS << "  Buffer_" << Out->getName();
     for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
-      OS << "[elem_" << i << "]";
+      OS << "[elem_" << (G->getNumDimensions()-i-1) << "]";
     }
     OS << " = temp" << Temp << ";\n";
     
@@ -260,28 +260,18 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
 
     OS << "  Buffer_" << Out->getName();
     for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
-      OS << "[elem_" << i << "]";
+      OS << "[elem_" << (G->getNumDimensions()-i-1) << "]";
     }
     OS << " = temp;\n";
         
     OS << "  } else {\n";
-    OS << "{\n";
-    OS << "AddrOffset = ";
-    DimTerms = 0;
-    Dim      = 0;
-    for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
-      if (i != 0) OS << " + ";
-      OS << "(thislocal_" << i << "+max_left_offset_" << i << ")";
-      for (unsigned i = 0; i < DimTerms; ++i) {
-        OS << "*shared_size_" << i;
-      }
-      ++DimTerms;
-      ++Dim;
-    }
-    OS << ";\n";
-    OS << "*(Shared_" << Out->getName() << " + AddrOffset) = 0;\n";
 
-    OS << "}\n";
+    OS << "  Buffer_" << Out->getName();
+    for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+      OS << "[elem_" << (G->getNumDimensions()-i-1) << "]";
+    }
+    OS << " = 0;\n";
+    
     OS << "  }\n";
     for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
       OS << "  }\n";
@@ -315,7 +305,7 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
     OS << ";\n";
     OS << "*(Shared_" << Out->getName() << " + AddrOffset) = Buffer_" << Out->getName();
     for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
-      OS << "[elem_" << i << "]";
+      OS << "[elem_" << (G->getNumDimensions()-i-1) << "]";
     }
     OS << ";\n";
 
@@ -356,7 +346,7 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
     Temp          = codegenExpr(F->getExpression(), OS, Temp);
     OS << "    Buffer_" << Out->getName();
     for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
-      OS << "[elem_" << i << "]";
+      OS << "[elem_" << (G->getNumDimensions()-i-1) << "]";
     }    
     OS << " = temp" << Temp;
     OS << ";\n";
@@ -413,7 +403,7 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
     OS << ";\n";
     OS << "*(Shared_" << Out->getName() << " + AddrOffset) = Buffer_" << Out->getName();
     for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
-      OS << "[elem_" << i << "]";
+      OS << "[elem_" << (G->getNumDimensions()-i-1) << "]";
     }
     OS << ";\n";
     OS << "    }\n";
@@ -472,7 +462,7 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
     OS << ";\n";
     OS << "*(Out_" << Out->getName() << " + AddrOffset) = Buffer_" << Out->getName();
     for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
-      OS << "[elem_" << i << "]";
+      OS << "[elem_" << (G->getNumDimensions()-i-1) << "]";
     }
     OS << ";\n";
     
@@ -583,7 +573,7 @@ void CudaBackEnd::codegenHost(llvm::raw_ostream &OS) {
 
   OS << "  dim3 grid_size(num_blocks_0";
   for (unsigned i = 1, e = G->getNumDimensions(); i < e; ++i) {
-    OS << ", BlockDim_" << i << " * num_blocks_" << i;
+    OS << ", num_blocks_" << i;
   }
   OS << ");\n";
 
@@ -604,7 +594,7 @@ void CudaBackEnd::codegenHost(llvm::raw_ostream &OS) {
     OS << "device" << F->getName() << "_OutPtr, ";
   }
   for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
-    if (i < e-1) OS << ", ";
+    if (i > 0) OS << ", ";
     OS << "Dim_" << i;
   }
   OS << ");\n";
@@ -733,7 +723,7 @@ unsigned CudaBackEnd::codegenFieldRef(FieldRef *Ref, llvm::raw_ostream &OS,
       if (InTS0)
         OS << "*Dim_" << i;
       else
-        OS << "*thislocal_" << i << "";
+        OS << "*shared_size_" << i << "";
     }
     ++DimTerms;
     ++Dim;
