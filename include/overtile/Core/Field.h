@@ -1,4 +1,7 @@
 
+#ifndef OVERTILE_CORE_FIELD_H
+#define OVERTILE_CORE_FIELD_H
+
 #include <string>
 
 namespace overtile {
@@ -32,3 +35,5 @@ private:
 };
 
 }
+
+#endif

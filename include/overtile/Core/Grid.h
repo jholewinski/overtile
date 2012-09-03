@@ -1,6 +1,10 @@
 
+#ifndef OVERTILE_CORE_GRID_H
+#define OVERTILE_CORE_GRID_H
+
 #include "llvm/ADT/StringRef.h"
 #include <list>
+
 
 namespace overtile {
 
@@ -53,3 +57,5 @@ private:
 };
 
 }
+
+#endif

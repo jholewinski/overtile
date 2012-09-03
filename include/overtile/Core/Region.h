@@ -1,4 +1,7 @@
 
+#ifndef OVERTILE_CORE_REGION_H
+#define OVERTILE_CORE_REGION_H
+
 #include <vector>
 #include <ostream>
 #include <cassert>
@@ -38,3 +41,5 @@ private:
 };
 
 }
+
+#endif

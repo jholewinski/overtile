@@ -1,4 +1,7 @@
 
+#ifndef OVERTILE_CORE_TYPES_H
+#define OVERTILE_CORE_TYPES_H
+
 #include <string>
 
 namespace overtile {
@@ -60,3 +63,5 @@ public:
 };
 
 }
+
+#endif

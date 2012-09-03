@@ -1,6 +1,7 @@
 
 add_llvm_library(OTCore
   BackEnd.cpp
+  CudaBackEnd.cpp
   Error.cpp
   Expressions.cpp
   Field.cpp

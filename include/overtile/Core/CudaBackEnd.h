@@ -1,6 +1,6 @@
 
-#ifndef OVERTILE_CORE_OPENCLBACKEND_H
-#define OVERTILE_CORE_OPENCLBACKEND_H
+#ifndef OVERTILE_CORE_CUDABACKEND_H
+#define OVERTILE_CORE_CUDABACKEND_H
 
 #include "overtile/Core/BackEnd.h"
 
@@ -13,18 +13,19 @@ class Expression;
 class FieldRef;
 
 /**
- * Back-end code generator for OpenCL.
+ * Back-end code generator for Cuda.
  */
-class OpenCLBackEnd : public BackEnd {
+class CudaBackEnd : public BackEnd {
 public:
-  OpenCLBackEnd(Grid *G);
-  virtual ~OpenCLBackEnd();
+  CudaBackEnd(Grid *G);
+  virtual ~CudaBackEnd();
 
   virtual void codegen(llvm::raw_ostream &OS);
-  virtual void codegenDevice(llvm::raw_ostream &OS);
-  virtual void codegenHost(llvm::raw_ostream &OS);
 
 private:
+
+  virtual void codegenDevice(llvm::raw_ostream &OS);
+  virtual void codegenHost(llvm::raw_ostream &OS);
 
   bool InTS0;
   

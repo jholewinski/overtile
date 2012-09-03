@@ -1,4 +1,7 @@
 
+#ifndef OVERTILE_CORE_EXPRESSIONS_H
+#define OVERTILE_CORE_EXPRESSIONS_H
+
 #include <vector>
 #include <set>
 #include <string>
@@ -172,3 +175,5 @@ private:
   
 
 }
+
+#endif

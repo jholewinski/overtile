@@ -14,6 +14,9 @@ BackEnd::BackEnd(Grid *G)
   : TheGrid(G), TimeTileSize(1) {
   assert(G != NULL && "G cannot be NULL");
 
+  BlockSize = new unsigned[G->getNumDimensions()];
+  Elements  = new unsigned[G->getNumDimensions()];
+  
   const std::list<Field*> &Fields     = G->getFieldList();
   unsigned                 Dimensions = G->getNumDimensions();
 
@@ -25,6 +28,8 @@ BackEnd::BackEnd(Grid *G)
 }
 
 BackEnd::~BackEnd() {
+  delete BlockSize;
+  delete Elements;
 }
 
 void BackEnd::run() {

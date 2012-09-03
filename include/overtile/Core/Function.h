@@ -1,4 +1,7 @@
 
+#ifndef OVERTILE_CORE_FUNCTION_H
+#define OVERTILE_CORE_FUNCTION_H
+
 #include "llvm/ADT/StringRef.h"
 #include <vector>
 #include <set>
@@ -67,3 +70,5 @@ private:
 };
 
 }
+
+#endif

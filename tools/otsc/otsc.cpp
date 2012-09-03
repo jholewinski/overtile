@@ -1,6 +1,6 @@
 
 #include "overtile/Parser/OTDParser.h"
-#include "overtile/Core/OpenCLBackEnd.h"
+#include "overtile/Core/CudaBackEnd.h"
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -19,17 +19,38 @@ static cl::opt<std::string>
 InputFileName(cl::Positional, cl::desc("<input file>"), cl::init("-"));
 
 static cl::opt<std::string>
-OutputDevFileName("dev", cl::desc("Specify output filename"),
-                  cl::value_desc("filename"));
-
-static cl::opt<std::string>
-OutputHostFileName("host", cl::desc("Specify output filename"),
-                  cl::value_desc("filename"));
-
+OutputFileName("out", cl::desc("Specify output filename"),
+               cl::value_desc("filename"), cl::init("-"));
 
 static cl::opt<unsigned>
 TimeTileSize("time-tile", cl::desc("Specify time tile size"),
              cl::value_desc("N"));
+
+static cl::opt<unsigned>
+BlockSizeX("x", cl::desc("Specify block size (X)"),
+           cl::value_desc("N"));
+
+static cl::opt<unsigned>
+BlockSizeY("y", cl::desc("Specify block size (Y)"),
+           cl::value_desc("N"));
+
+static cl::opt<unsigned>
+BlockSizeZ("z", cl::desc("Specify block size (Z)"),
+           cl::value_desc("N"));
+
+
+static cl::opt<unsigned>
+ElementsX("ex", cl::desc("Specify elements per thread (X)"),
+          cl::value_desc("N"), cl::init(1));
+
+static cl::opt<unsigned>
+ElementsY("ey", cl::desc("Specify elements per thread (Y)"),
+          cl::value_desc("N"), cl::init(1));
+
+static cl::opt<unsigned>
+ElementsZ("ez", cl::desc("Specify elements per thread (Z)"),
+          cl::value_desc("N"), cl::init(1));
+
 
 namespace {
 void PrintVersion() {
@@ -67,35 +88,28 @@ int main(int argc, char **argv) {
 
   // Write out result
 
-  OpenCLBackEnd OCL(G.get());
-  OCL.setTimeTileSize(TimeTileSize);
-  OCL.run();
+  CudaBackEnd BE(G.get());
+  BE.setTimeTileSize(TimeTileSize);
+  BE.setBlockSize(0, BlockSizeX);
+  BE.setBlockSize(1, BlockSizeY);
+  BE.setBlockSize(2, BlockSizeZ);
+  BE.setElements(0, ElementsX);
+  BE.setElements(1, ElementsY);
+  BE.setElements(2, ElementsZ);
+  BE.run();
   
   std::string Err;
 
-  OwningPtr<tool_output_file> HostOut(
-    new tool_output_file(OutputHostFileName.c_str(), Err));
+  OwningPtr<tool_output_file> Out(
+    new tool_output_file(OutputFileName.c_str(), Err));
   if (!Err.empty()) {
     errs() << Err << "\n";
     return 1;
   }
 
-  OCL.codegenHost(HostOut->os());
+  BE.codegen(Out->os());
 
-
-  OwningPtr<tool_output_file> DevOut(
-    new tool_output_file(OutputDevFileName.c_str(), Err));
-  if (!Err.empty()) {
-    errs() << Err << "\n";
-    return 1;
-  }
-
-  OCL.codegenDevice(DevOut->os());
-
-  
-
-  HostOut->keep();
-  DevOut->keep();
+  Out->keep();
 
   return 0;
 }

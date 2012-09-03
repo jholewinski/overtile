@@ -1,3 +1,7 @@
+
+#ifndef OVERTILE_CORE_CGEXPRESSIONS_H
+#define OVERTILE_CORE_CGEXPRESSIONS_H
+
 #include <vector>
 
 namespace overtile {
@@ -65,3 +69,5 @@ public:
 
 
 }
+
+#endif

@@ -1,7 +1,7 @@
 
 
-#ifndef OVERTILE_ERROR_H
-#define OVERTILE_ERROR_H
+#ifndef OVERTILE_CORE_ERROR_H
+#define OVERTILE_CORE_ERROR_H
 
 #include "llvm/Support/system_error.h"
 
