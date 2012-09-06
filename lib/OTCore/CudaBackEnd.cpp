@@ -608,8 +608,8 @@ void CudaBackEnd::codegenHost(llvm::raw_ostream &OS) {
   
   OS << "  }\n";
 
-  OS << "  cudaEventRecord(StopEvent, 0);\n";
-  OS << "  cudaEventSynchronize(StopEvent);\n";
+  OS << "  assert(cudaEventRecord(StopEvent, 0) == cudaSuccess);\n";
+  OS << "  assert(cudaEventSynchronize(StopEvent) == cudaSuccess);\n";
 
 
   for (std::list<Field*>::iterator I = Fields.begin(), E  = Fields.end();
