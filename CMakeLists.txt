@@ -41,5 +41,23 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 
+### Bison
+find_program(BISON_PROGRAM NAMES bison)
+if (BISON_PROGRAM)
+  message(STATUS "Found bison: ${BISON_PROGRAM}")
+else()
+  message(FATAL_ERROR "Bison not found")
+endif()
+
+macro(add_bison_target PREFIX GRAMMAR SOURCE HEADER)
+  add_custom_command(OUTPUT  ${SOURCE}
+                     OUTPUT  ${HEADER}
+                     DEPENDS ${GRAMMAR}
+                     COMMAND ${BISON_PROGRAM} -p ${PREFIX} -o "${SOURCE}" --defines="${HEADER}" "${CMAKE_CURRENT_SOURCE_DIR}/${GRAMMAR}"
+                     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+endmacro()
+
+
+
 add_subdirectory(lib)
 add_subdirectory(tools)

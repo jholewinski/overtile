@@ -1,5 +1,8 @@
 
 #include "overtile/Parser/OTDParser.h"
+#include "overtile/Parser/SSPParser.h"
+
+
 #include "overtile/Core/CudaBackEnd.h"
 
 #include "llvm/Support/CommandLine.h"
@@ -24,7 +27,7 @@ OutputFileName("out", cl::desc("Specify output filename"),
 
 static cl::opt<unsigned>
 TimeTileSize("time-tile", cl::desc("Specify time tile size"),
-             cl::value_desc("N"));
+             cl::value_desc("N"), cl::init(1));
 
 static cl::opt<unsigned>
 BlockSizeX("x", cl::desc("Specify block size (X)"),
@@ -78,7 +81,12 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  SourceMgr SM;
+  SSPParser P(InDoc.take(), SM);
+  error_code f = P.parseBuffer();
 
+  return 0;
+  
   OwningPtr<Grid> G;
   if (error_code ec = ParseOTD(InDoc.get(), G)) {
     errs() << "Parsing error: " << ec.message() << "\n";
