@@ -40,6 +40,8 @@ void CudaBackEnd::codegen(llvm::raw_ostream &OS) {
 
 void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
 
+  WrittenFields.clear();
+  
   Grid                 *G         = getGrid();
   std::list<Function*>  Functions = G->getFunctionList();
   
@@ -315,6 +317,7 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
     
     OS << "  __syncthreads();\n";
 
+    WrittenFields.insert(Out->getName());
   }
 
 
@@ -608,8 +611,8 @@ void CudaBackEnd::codegenHost(llvm::raw_ostream &OS) {
   
   OS << "  }\n";
 
-  OS << "  cudaEventRecord(StopEvent, 0);\n";
-  OS << "  cudaEventSynchronize(StopEvent);\n";
+  OS << "  assert(cudaEventRecord(StopEvent, 0) == cudaSuccess);\n";
+  OS << "  assert(cudaEventSynchronize(StopEvent) == cudaSuccess);\n";
 
 
   for (std::list<Field*>::iterator I = Fields.begin(), E  = Fields.end();
@@ -700,11 +703,16 @@ unsigned CudaBackEnd::codegenFieldRef(FieldRef *Ref, llvm::raw_ostream &OS,
   const std::vector<IntConstant*>               Offsets = Ref->getOffsets();
 
   std::string Prefix;
-  
-  if (InTS0) Prefix = "In_";
-  else Prefix       = "Shared_";
-  
+
+  bool UseShared = true;
+
   std::string Name = F->getName();
+    
+  if (InTS0 && WrittenFields.count(Name) == 0) UseShared = false;
+  
+  if (!UseShared) Prefix = "In_";
+  else Prefix       = "Shared_";
+ 
 
   OS << "AddrOffset = ";
 
@@ -715,12 +723,12 @@ unsigned CudaBackEnd::codegenFieldRef(FieldRef *Ref, llvm::raw_ostream &OS,
          E        = Offsets.end(), B = I; I != E; ++I) {
     int    Offset = (*I)->getValue();
     if (B != I) OS << " + ";
-    if (InTS0)
+    if (!UseShared)
       OS << "(thisid_" << Dim << "+" << (*I)->getValue() << ")";
     else
       OS << "((thislocal_" << Dim << "+" << (*I)->getValue() << ")+max_left_offset_" << Dim << ")";
     for (unsigned i = 0; i < DimTerms; ++i) {
-      if (InTS0)
+      if (!UseShared)
         OS << "*Dim_" << i;
       else
         OS << "*shared_size_" << i << "";
@@ -730,7 +738,7 @@ unsigned CudaBackEnd::codegenFieldRef(FieldRef *Ref, llvm::raw_ostream &OS,
   }
   OS << ";\n";
 
-  if (InTS0) {
+  if (!UseShared) {
     OS << "AddrOffset = max(AddrOffset, 0);\n";
     OS << "AddrOffset = min(AddrOffset, array_size-1);\n";
   }
