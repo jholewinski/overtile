@@ -6,15 +6,51 @@
 #include "overtile/Core/CudaBackEnd.h"
 #include "overtile/Core/Types.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/CommandLine.h"
 #include <iostream>
 #include <fstream>
 
+using namespace llvm;
 using namespace overtile;
+
+
+static cl::opt<unsigned>
+TimeTileSize("t", cl::desc("Specify time tile size"),
+             cl::value_desc("N"), cl::init(1));
+
+static cl::opt<unsigned>
+BlockSizeX("x", cl::desc("Specify block size (X)"),
+           cl::value_desc("N"), cl::init(16));
+
+static cl::opt<unsigned>
+BlockSizeY("y", cl::desc("Specify block size (Y)"),
+           cl::value_desc("N"), cl::init(4));
+
+static cl::opt<unsigned>
+BlockSizeZ("z", cl::desc("Specify block size (Z)"),
+           cl::value_desc("N"), cl::init(4));
+
+
+static cl::opt<unsigned>
+ElementsX("ex", cl::desc("Specify elements per thread (X)"),
+          cl::value_desc("N"), cl::init(1));
+
+static cl::opt<unsigned>
+ElementsY("ey", cl::desc("Specify elements per thread (Y)"),
+          cl::value_desc("N"), cl::init(1));
+
+static cl::opt<unsigned>
+ElementsZ("ez", cl::desc("Specify elements per thread (Z)"),
+          cl::value_desc("N"), cl::init(1));
+
+
 
 int main(int argc, char** argv) {
 
+  cl::ParseCommandLineOptions(argc, argv, "Rician3D example");
+    
   ElementType *Ty = new FP32Type();
-  Grid        *GD  = new Grid(3);
+  Grid        *GD = new Grid(3);
 
   Field *U = new Field(GD, Ty, "U");
   Field *G = new Field(GD, Ty, "G");
@@ -228,13 +264,13 @@ int main(int argc, char** argv) {
 
   CudaBackEnd BE(GD);
   BE.setVerbose(true);
-  BE.setTimeTileSize(1);
-  BE.setElements(0, 1);
-  BE.setElements(1, 1);
-  BE.setElements(2, 1);
-  BE.setBlockSize(0, 16);
-  BE.setBlockSize(1, 4);
-  BE.setBlockSize(2, 4);
+  BE.setTimeTileSize(TimeTileSize);
+  BE.setBlockSize(0, BlockSizeX);
+  BE.setBlockSize(1, BlockSizeY);
+  BE.setBlockSize(2, BlockSizeZ);
+  BE.setElements(0, ElementsX);
+  BE.setElements(1, ElementsY);
+  BE.setElements(2, ElementsZ);
 
   BE.run();
   
