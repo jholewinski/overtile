@@ -3,6 +3,7 @@
 #include "overtile/Parser/SSPParser.h"
 #include "SSPParserGenerated.h"
 
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Twine.h"
 
 using namespace llvm;
@@ -41,6 +42,13 @@ error_code SSPParser::parseBuffer() {
   
   int error = SSPparse(this);
 
+  if (error != 0) {
+    StringRef   BufferData = Buf->getBuffer();
+    const char *Data       = BufferData.data();
+    SrcMgr.PrintMessage(SMLoc::getFromPointer(Data+CurPos),
+                        SourceMgr::DK_Error, "Parse error");
+  }
+  
   InternedStrings.clear();
   
   return make_error_code(overtile_error::success);
@@ -63,7 +71,19 @@ int SSPParser::getNextToken(void *Val) {
   if (CurPos >= BufferData.size())
     return 0;                   // EOF
 
-  if (IsAlpha(*CurCh)) {
+  if (*CurCh == '+') {
+    CurPos++;
+    return PLUS;
+  } else if (*CurCh == '-') {
+    CurPos++;
+    return MINUS;
+  } else if (*CurCh == '*') {
+    CurPos++;
+    return ASTERISK;
+  } else if (*CurCh == '/') {
+    CurPos++;
+    return SLASH;
+  } else if (IsAlpha(*CurCh)) {
     const char *Start  = CurCh;
     size_t      Length = 0;
     
@@ -71,7 +91,7 @@ int SSPParser::getNextToken(void *Val) {
       Length++;
       CurPos++;
       CurCh = Data+CurPos;
-    } while (CurPos < BufferData.size() && IsAlpha(*CurCh));
+    } while (CurPos < BufferData.size() && IsAlphaOrDigit(*CurCh));
 
     StringRef Str = StringRef(Start, Length);
 
@@ -82,8 +102,87 @@ int SSPParser::getNextToken(void *Val) {
     
     // Not a keyword
     InternedStrings.push_back(Str);
-    Value->Ident = &(InternedStrings.back());
+    Value->Ident        = &(InternedStrings.back());
     return IDENT;
+  } else if (IsDigit(*CurCh)) {
+    const char *Start   = CurCh;
+    size_t      Length  = 0;
+    bool        IsFloat = false;
+      
+    do {
+      if (*CurCh == '.') IsFloat = true;
+      
+      Length++;
+      CurPos++;
+      CurCh = Data+CurPos;
+      
+    } while (CurPos < BufferData.size() && (IsDigit(*CurCh) || *CurCh == '.'));
+
+    if (CurPos < BufferData.size() && *CurCh == 'e') {
+      // Start of an exponent
+
+      IsFloat = true;
+      
+      CurPos++;
+      CurCh = Data+CurPos;
+      Length++;
+      
+      if (CurPos == BufferData.size() || (!IsDigit(*CurCh) && *CurCh != '-')) {
+        SrcMgr.PrintMessage(SMLoc::getFromPointer(Data+CurPos),
+                            SourceMgr::DK_Error, "Missing exponent");
+        return 0;
+      }
+
+      if (*CurCh == '-') {
+        Length++;
+        CurPos++;
+        CurCh = Data+CurPos;
+
+        if (CurPos == BufferData.size() || !IsDigit(*CurCh)) {
+          SrcMgr.PrintMessage(SMLoc::getFromPointer(Data+CurPos),
+                              SourceMgr::DK_Error, "Missing exponent");
+          return 0;
+        }
+      }
+
+      do {
+        Length++;
+        CurPos++;
+        CurCh = Data+CurPos;
+      
+      } while (CurPos < BufferData.size() && IsDigit(*CurCh));
+
+    }
+    
+    StringRef Str = StringRef(Start, Length);
+
+    if (IsFloat) {
+      APFloat DoubleValue = APFloat(APFloat::IEEEdouble, Str);
+      Value->DoubleConst  = DoubleValue.convertToDouble();
+      return DOUBLECONST;
+    } else {
+      long    IntValue    = atol(Str.data());
+      Value->IntConst     = IntValue;
+      return INTCONST;
+    }
+  } else if (*CurCh == '=') {
+    CurPos++;
+    return EQUALS;
+  } else if (*CurCh == '(') {
+    CurPos++;
+    return OPENPARENS;
+  } else if (*CurCh == ')') {
+    CurPos++;
+    return CLOSEPARENS;
+  } else if (*CurCh == '[') {
+    CurPos++;
+    return OPENBRACE;
+  } else if (*CurCh == ']') {
+    CurPos++;
+    return CLOSEBRACE;
+  } else if (*CurCh == ',') {
+    CurPos++;
+    return COMMA;
   }
 
   // If we get here, then we have no idea how to lex this!
