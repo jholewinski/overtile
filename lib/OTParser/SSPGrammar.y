@@ -25,7 +25,16 @@ void SSPerror(const char*);
   double DoubleConst;
 }
 
+%token DOUBLE
+%token FIELD
+%token FLOAT
 %token FUNCTION
+%token GRID
+%token IN
+%token INOUT
+%token IS
+%token OUT
+%token PROGRAM
 %token<Ident> IDENT
 %token<IntConst> INTCONST
 %token<DoubleConst> DOUBLECONST
@@ -34,21 +43,50 @@ void SSPerror(const char*);
 %token OPENBRACE CLOSEBRACE
 %token COMMA
 %token PLUS MINUS ASTERISK SLASH
+%token COLON
 
 
 %%
 
 top_level
-: decl_list
+: PROGRAM IDENT IS grid_def field_list function_list application_list
 ;
 
-decl_list
+grid_def
+: GRID INTCONST
+;
+
+field_list
 : /* empty */
-| decl decl_list
+| field_def field_list
 ;
 
-decl
-: function
+field_def
+: FIELD IDENT type copy_semantic
+;
+
+application_list
+: /* empty */
+| application_def application_list
+;
+
+application_def
+: IDENT application_bounds EQUALS IDENT OPENPARENS param_list CLOSEPARENS
+;
+
+application_bounds
+: /* empty */
+| application_bound application_bounds
+;
+
+application_bound
+: OPENBRACE INTCONST COLON INTCONST CLOSEBRACE
+;
+
+function_list
+: /* empty */
+| function function_list
+;
 
 function
 : FUNCTION IDENT OPENPARENS param_list CLOSEPARENS EQUALS expression
@@ -111,6 +149,17 @@ int_constant
 
 double_constant
 : DOUBLECONST
+;
+
+type
+: FLOAT
+| DOUBLE
+;
+
+copy_semantic
+: INOUT
+| IN
+| OUT
 ;
 
 %%

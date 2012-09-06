@@ -96,9 +96,28 @@ int SSPParser::getNextToken(void *Val) {
     StringRef Str = StringRef(Start, Length);
 
     // Check for keywords
-    if (Str.compare("function") == 0) {
+    if (Str.compare("double")          == 0) {
+      return DOUBLE;
+    } else if (Str.compare("field")    == 0) {
+      return FIELD;
+    } else if (Str.compare("float")    == 0) {
+      return FLOAT;
+    } else if (Str.compare("function") == 0) {
       return FUNCTION;
+    } else if (Str.compare("grid")     == 0) {
+      return GRID;
+    } else if (Str.compare("in")       == 0) {
+      return IN;
+    } else if (Str.compare("inout")    == 0) {
+      return INOUT;
+    } else if (Str.compare("is")       == 0) {
+      return IS;
+    } else if (Str.compare("out")      == 0) {
+      return OUT;
+    } else if (Str.compare("program")  == 0) {
+      return PROGRAM;
     }
+
     
     // Not a keyword
     InternedStrings.push_back(Str);
@@ -183,6 +202,9 @@ int SSPParser::getNextToken(void *Val) {
   } else if (*CurCh == ',') {
     CurPos++;
     return COMMA;
+  } else if (*CurCh == ':') {
+    CurPos++;
+    return COLON;
   }
 
   // If we get here, then we have no idea how to lex this!
