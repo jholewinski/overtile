@@ -3,9 +3,13 @@
 #include "overtile/Core/Expressions.h"
 #include "overtile/Core/Field.h"
 #include "overtile/Core/Grid.h"
+#include "llvm/ADT/APFloat.h"
 #include <sstream>
 #include <cassert>
 #include <cstdlib>
+#include <iostream>
+
+using namespace llvm;
 
 namespace overtile {
 
@@ -67,9 +71,18 @@ ConstantExpr::~ConstantExpr() {
 
 FP32Constant::FP32Constant(float V)
   : ConstantExpr(Expression::FP32Const), Value(V) {
-  std::stringstream Str;
-  Str << V;
-  StringValue = Str.str();
+  APFloat APV(V);
+
+  SmallVector<char, 32> Str;
+  APV.toString(Str);
+
+  std::string Val = std::string(&Str[0]);
+  
+  if (Val.find('.') == std::string::npos) {
+    Val             += ".0";
+  }
+  
+  StringValue = std::string(Val);
 }
 
 FP32Constant::~FP32Constant() {
