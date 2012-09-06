@@ -3,6 +3,7 @@
 #define OVERTILE_CORE_CUDABACKEND_H
 
 #include "overtile/Core/BackEnd.h"
+#include <set>
 
 namespace overtile {
 
@@ -27,7 +28,8 @@ private:
   virtual void codegenDevice(llvm::raw_ostream &OS);
   virtual void codegenHost(llvm::raw_ostream &OS);
 
-  bool InTS0;
+  bool                  InTS0;
+  std::set<std::string> WrittenFields;
   
   static std::string getTypeName(const ElementType *Ty);
 
