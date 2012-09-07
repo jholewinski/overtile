@@ -1,4 +1,6 @@
 %pure_parser
+%lex-param {overtile::SSPParser *Parser}
+%parse-param {overtile::SSPParser *Parser}
 
 %{
   
@@ -18,11 +20,9 @@
 using namespace overtile;
 using namespace llvm;
 
-#define YYLEX_PARAM State
-#define YYPARSE_PARAM State
 #define YYERROR_VERBOSE 1
 
-void SSPerror(const char*);
+void SSPerror(SSPParser*, const char*);
 
 %}
 
@@ -80,7 +80,7 @@ top_level
 grid_def
 : GRID INTCONST {
     Grid *G = new Grid($2);
-    static_cast<SSPParser*>(State)->setGrid(G);
+    Parser->setGrid(G);
   }
 ;
 
@@ -91,7 +91,7 @@ field_list
 
 field_def
 : FIELD IDENT type copy_semantic {
-    Grid *G = static_cast<SSPParser*>(State)->getGrid();
+    Grid *G = Parser->getGrid();
     Field *F = new Field(G, $3, $2->str());
   }
 ;
@@ -103,7 +103,7 @@ application_list
 
 application_def
 : IDENT application_bounds EQUALS expression {
-    Grid *G = static_cast<SSPParser*>(State)->getGrid();
+    Grid *G = Parser->getGrid();
     Field *Out = G->getFieldByName(*$1);
     Expression *E = $4;
     Function *Func = new Function(Out, E);
@@ -186,7 +186,7 @@ unary_expr
 
 field_ref
 : IDENT offset_list {
-    Grid *G = static_cast<SSPParser*>(State)->getGrid();
+    Grid *G = Parser->getGrid();
     Field *F = G->getFieldByName(*$1);
     $$ = new FieldRef(F, *$2);
     delete $2;
@@ -243,6 +243,6 @@ copy_semantic
 
 %%
 
-void SSPerror(const char *Str) {
+void SSPerror(SSPParser *Parser, const char *Str) {
   std::cerr << Str << "\n";
 }

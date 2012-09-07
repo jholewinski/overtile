@@ -11,7 +11,7 @@
 
 using namespace llvm;
 
-extern int SSPparse(void*);
+extern int SSPparse(overtile::SSPParser*);
 
 namespace {
 inline bool IsAlpha(char Ch) {
