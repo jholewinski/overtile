@@ -15,6 +15,9 @@ Contents:
    ir
 
 
+For an API reference, please see: `Doxygen Documentation </overtile/doxygen/annotated.html>`_
+
+Developer Access: `OverTile Source <https://barista.cse.ohio-state.edu/rhodecode/overtile>`_
 
 Indices and tables
 ==================
