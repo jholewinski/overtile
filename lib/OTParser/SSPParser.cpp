@@ -102,8 +102,6 @@ int SSPParser::getNextToken(void *Val) {
       return FIELD;
     } else if (Str.compare("float")    == 0) {
       return FLOAT;
-    } else if (Str.compare("function") == 0) {
-      return FUNCTION;
     } else if (Str.compare("grid")     == 0) {
       return GRID;
     } else if (Str.compare("in")       == 0) {

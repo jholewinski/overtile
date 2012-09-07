@@ -28,7 +28,6 @@ void SSPerror(const char*);
 %token DOUBLE
 %token FIELD
 %token FLOAT
-%token FUNCTION
 %token GRID
 %token IN
 %token INOUT
@@ -49,7 +48,7 @@ void SSPerror(const char*);
 %%
 
 top_level
-: PROGRAM IDENT IS grid_def field_list function_list application_list
+: PROGRAM IDENT IS grid_def field_list application_list
 ;
 
 grid_def
@@ -71,7 +70,7 @@ application_list
 ;
 
 application_def
-: IDENT application_bounds EQUALS IDENT OPENPARENS param_list CLOSEPARENS
+: IDENT application_bounds EQUALS expression
 ;
 
 application_bounds
@@ -81,28 +80,6 @@ application_bounds
 
 application_bound
 : OPENBRACE INTCONST COLON INTCONST CLOSEBRACE
-;
-
-function_list
-: /* empty */
-| function function_list
-;
-
-function
-: FUNCTION IDENT OPENPARENS param_list CLOSEPARENS EQUALS expression
-
-param_list
-: /* empty */
-| param other_param_list
-;
-
-other_param_list
-: /* empty */
-| COMMA param other_param_list
-;
-
-param
-: IDENT
 ;
 
 expression
