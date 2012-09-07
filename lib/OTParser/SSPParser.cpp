@@ -47,10 +47,8 @@ error_code SSPParser::parseBuffer() {
   int error = SSPparse(this);
 
   if (error != 0) {
-    StringRef   BufferData = Buf->getBuffer();
-    const char *Data       = BufferData.data();
-    SrcMgr.PrintMessage(SMLoc::getFromPointer(Data+CurPos),
-                        SourceMgr::DK_Error, "Parse error");
+    printError("Error(s) occurred during parse!", false);
+    return make_error_code(overtile_error::ssp_parse_error);
   }
 
   for (unsigned i = 0, e = InternedStrings.size(); i != e; ++i) {
@@ -211,11 +209,33 @@ int SSPParser::getNextToken(void *Val) {
     return COLON;
   }
 
+  CurPos++;
   // If we get here, then we have no idea how to lex this!
-  SrcMgr.PrintMessage(SMLoc::getFromPointer(Data+CurPos),
-                      SourceMgr::DK_Error, "Invalid symbol");
+  printError("Unknown symbol");
   
   return 0;
+}
+
+void SSPParser::printError(StringRef Msg, bool PrintLoc) {
+  StringRef   BufferData = Buf->getBuffer();
+  const char *Data       = BufferData.data();
+  unsigned    Pos        = CurPos;
+
+  if (Pos > 0) {
+    // The actual error will be one less than the *current* character
+    --Pos;
+  }
+  
+  if (Pos >= BufferData.size()) {
+    Pos = BufferData.size()-1;
+  }
+
+  SMLoc Loc = SMLoc();
+  if (PrintLoc) {
+    Loc     = SMLoc::getFromPointer(Data+Pos);
+  }
+  
+  SrcMgr.PrintMessage(Loc, SourceMgr::DK_Error, Msg);
 }
 
 }

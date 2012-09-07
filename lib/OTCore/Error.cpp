@@ -8,15 +8,15 @@ namespace overtile {
 class _overtile_category : public _do_message {
 public:
   virtual const char *name() const {
-    return "cuda.elf";
+    return "overtile";
   }
 
   virtual std::string message(int ev) const {
     switch (ev) {
     case overtile_error::success:
       return "Success";
-    case overtile_error::invalid_yaml:
-      return "Invalid YAML";
+    case overtile_error::ssp_parse_error:
+      return "SSP Parse Error";
     default:
       llvm_unreachable("Invalid overtile_error enumerator");
     }

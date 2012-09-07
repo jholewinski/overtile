@@ -37,6 +37,8 @@ public:
     assert(G == NULL && "Grid already set");
     G = GD;
   }
+
+  void printError(llvm::StringRef Msg, bool PrintLoc=true);
   
 private:
   unsigned                       CurPos;

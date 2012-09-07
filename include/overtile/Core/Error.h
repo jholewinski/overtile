@@ -13,7 +13,7 @@ const llvm::error_category &overtile_category();
 struct overtile_error {
   enum _ {
     success = 0,
-    invalid_yaml,
+    ssp_parse_error,
   };
   _ V_;
 

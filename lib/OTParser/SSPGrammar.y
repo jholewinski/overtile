@@ -92,6 +92,16 @@ field_list
 field_def
 : FIELD IDENT type copy_semantic {
     Grid *G = Parser->getGrid();
+
+    if (G->getFieldByName(*$2) != NULL) {
+      std::string        Msg;
+      raw_string_ostream MsgStr(Msg);
+      MsgStr << "Field '" << (*$2) << "' has already been defined";
+      MsgStr.flush();
+      yyerror(Parser, Msg.c_str());
+      YYERROR;
+    }
+    
     Field *F = new Field(G, $3, $2->str());
   }
 ;
@@ -188,6 +198,16 @@ field_ref
 : IDENT offset_list {
     Grid *G = Parser->getGrid();
     Field *F = G->getFieldByName(*$1);
+
+    if (F == NULL) {
+      std::string        Msg;
+      raw_string_ostream MsgStr(Msg);
+      MsgStr << "Field '" << (*$1) << "' has not been defined";
+      MsgStr.flush();
+      yyerror(Parser, Msg.c_str());
+      YYERROR;
+    }
+
     $$ = new FieldRef(F, *$2);
     delete $2;
   }
@@ -244,5 +264,5 @@ copy_semantic
 %%
 
 void SSPerror(SSPParser *Parser, const char *Str) {
-  std::cerr << Str << "\n";
+  Parser->printError(Str);
 }
