@@ -83,19 +83,16 @@ int main(int argc, char **argv) {
 
   SourceMgr SM;
   SSPParser P(InDoc.take(), SM);
-  error_code f = P.parseBuffer();
-
-  return 0;
-  
-  OwningPtr<Grid> G;
-  if (error_code ec = ParseOTD(InDoc.get(), G)) {
-    errs() << "Parsing error: " << ec.message() << "\n";
+  if (error_code f = P.parseBuffer()) {  
+    errs() << "Abort due to errors\n";
     return 1;
   }
 
+  
+  OwningPtr<Grid> G(P.getGrid());
+
 
   // Write out result
-
   CudaBackEnd BE(G.get());
   BE.setTimeTileSize(TimeTileSize);
   BE.setBlockSize(0, BlockSizeX);

@@ -1,10 +1,13 @@
 
 #include "overtile/Core/Error.h"
+#include "overtile/Core/Expressions.h"
+#include "overtile/Core/Types.h"
 #include "overtile/Parser/SSPParser.h"
 #include "SSPParserGenerated.h"
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -28,7 +31,8 @@ namespace overtile {
 
 SSPParser::SSPParser(MemoryBuffer *Buffer, SourceMgr &SM)
   : SrcMgr(SM),
-    Buf(Buffer) {
+    Buf(Buffer),
+    G(NULL) {
   SM.AddNewSourceBuffer(Buffer, SMLoc());
 }
 
@@ -48,7 +52,10 @@ error_code SSPParser::parseBuffer() {
     SrcMgr.PrintMessage(SMLoc::getFromPointer(Data+CurPos),
                         SourceMgr::DK_Error, "Parse error");
   }
-  
+
+  for (unsigned i = 0, e = InternedStrings.size(); i != e; ++i) {
+    delete InternedStrings[i];
+  }  
   InternedStrings.clear();
   
   return make_error_code(overtile_error::success);
@@ -93,33 +100,32 @@ int SSPParser::getNextToken(void *Val) {
       CurCh = Data+CurPos;
     } while (CurPos < BufferData.size() && IsAlphaOrDigit(*CurCh));
 
-    StringRef Str = StringRef(Start, Length);
+    StringRef *Str = new StringRef(Start, Length);
 
     // Check for keywords
-    if (Str.compare("double")          == 0) {
+    if (Str->compare("double")          == 0) {
       return DOUBLE;
-    } else if (Str.compare("field")    == 0) {
+    } else if (Str->compare("field")    == 0) {
       return FIELD;
-    } else if (Str.compare("float")    == 0) {
+    } else if (Str->compare("float")    == 0) {
       return FLOAT;
-    } else if (Str.compare("grid")     == 0) {
+    } else if (Str->compare("grid")     == 0) {
       return GRID;
-    } else if (Str.compare("in")       == 0) {
+    } else if (Str->compare("in")       == 0) {
       return IN;
-    } else if (Str.compare("inout")    == 0) {
+    } else if (Str->compare("inout")    == 0) {
       return INOUT;
-    } else if (Str.compare("is")       == 0) {
+    } else if (Str->compare("is")       == 0) {
       return IS;
-    } else if (Str.compare("out")      == 0) {
+    } else if (Str->compare("out")      == 0) {
       return OUT;
-    } else if (Str.compare("program")  == 0) {
+    } else if (Str->compare("program")  == 0) {
       return PROGRAM;
     }
 
-    
     // Not a keyword
     InternedStrings.push_back(Str);
-    Value->Ident        = &(InternedStrings.back());
+    Value->Ident        = Str;
     return IDENT;
   } else if (IsDigit(*CurCh)) {
     const char *Start   = CurCh;

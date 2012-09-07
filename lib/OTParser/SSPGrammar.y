@@ -5,7 +5,14 @@
 // Stencil Spec (SSP) Grammar
 
 #include "overtile/Parser/SSPParser.h"
+#include "overtile/Core/Expressions.h"
+#include "overtile/Core/Field.h"
+#include "overtile/Core/Function.h"
+#include "overtile/Core/Grid.h"
+#include "overtile/Core/Types.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 #include <iostream>
 
 using namespace overtile;
@@ -23,6 +30,12 @@ void SSPerror(const char*);
   llvm::StringRef *Ident;
   long IntConst;
   double DoubleConst;
+
+  overtile::Expression *Expr;
+  overtile::ElementType *Type;
+  std::vector<overtile::IntConstant*> *IntList;
+  std::pair<unsigned, unsigned> *Bound;
+  std::vector<std::pair<unsigned, unsigned> > *BoundList;
 }
 
 %token DOUBLE
@@ -45,6 +58,19 @@ void SSPerror(const char*);
 %token COLON
 
 
+%type<IntConst> int_constant
+%type<IntConst> dim_offset
+%type<IntList> offset_list
+%type<DoubleConst> double_constant
+%type<Expr> unary_expr 
+%type<Expr> additive_expr 
+%type<Expr> multiplicative_expr 
+%type<Expr> expression
+%type<Expr> field_ref
+%type<Type> type
+%type<Bound> application_bound
+%type<BoundList> application_bounds
+
 %%
 
 top_level
@@ -52,7 +78,10 @@ top_level
 ;
 
 grid_def
-: GRID INTCONST
+: GRID INTCONST {
+    Grid *G = new Grid($2);
+    static_cast<SSPParser*>(State)->setGrid(G);
+  }
 ;
 
 field_list
@@ -61,7 +90,10 @@ field_list
 ;
 
 field_def
-: FIELD IDENT type copy_semantic
+: FIELD IDENT type copy_semantic {
+    Grid *G = static_cast<SSPParser*>(State)->getGrid();
+    Field *F = new Field(G, $3, $2->str());
+  }
 ;
 
 application_list
@@ -70,67 +102,137 @@ application_list
 ;
 
 application_def
-: IDENT application_bounds EQUALS expression
+: IDENT application_bounds EQUALS expression {
+    Grid *G = static_cast<SSPParser*>(State)->getGrid();
+    Field *Out = G->getFieldByName(*$1);
+    Expression *E = $4;
+    Function *Func = new Function(Out, E);
+
+    std::vector<std::pair<unsigned, unsigned> > *Bounds = $2;
+    for (unsigned i = 0, e = Bounds->size(); i < e; ++i) {
+      std::pair<unsigned, unsigned> B = (*Bounds)[i];
+      Func->setLowerBound(i, B.first);
+      Func->setUpperBound(i, B.second);
+    }
+    delete Bounds;
+
+    G->appendFunction(Func);
+  }
 ;
 
 application_bounds
-: /* empty */
-| application_bound application_bounds
+: application_bound application_bounds {
+    $$ = $2;
+    $$->push_back(*$1);
+    delete $1;
+  }
+| application_bound {
+    $$ = new std::vector<std::pair<unsigned, unsigned> >();
+    $$->push_back(*$1);
+    delete $1;
+  }
 ;
 
 application_bound
-: OPENBRACE INTCONST COLON INTCONST CLOSEBRACE
+: OPENBRACE INTCONST COLON INTCONST CLOSEBRACE {
+    $$ = new std::pair<unsigned, unsigned>($2, $4);
+  }
 ;
 
 expression
-: additive_expr
+: additive_expr {
+    $$ = $1;
+  }
 ;
 
 additive_expr
-: additive_expr PLUS multiplicative_expr
-| additive_expr MINUS multiplicative_expr
-| multiplicative_expr
+: additive_expr PLUS multiplicative_expr {
+    $$ = new BinaryOp(BinaryOp::ADD, $1, $3);
+  }
+| additive_expr MINUS multiplicative_expr {
+    $$ = new BinaryOp(BinaryOp::SUB, $1, $3);
+  }
+| multiplicative_expr {
+    $$ = $1;
+  }
 ;
 
 multiplicative_expr
-: multiplicative_expr ASTERISK unary_expr
-| multiplicative_expr SLASH unary_expr
-| unary_expr
+: multiplicative_expr ASTERISK unary_expr {
+    $$ = new BinaryOp(BinaryOp::MUL, $1, $3);
+  }
+| multiplicative_expr SLASH unary_expr {
+    $$ = new BinaryOp(BinaryOp::DIV, $1, $3);
+  }
+| unary_expr {
+    $$ = $1;
+  }
 ;
 
 unary_expr
-: field_ref
-| IDENT
-| int_constant
-| double_constant
-| OPENPARENS expression CLOSEPARENS
+: field_ref {
+    $$ = $1;
+  }
+| int_constant {
+    $$ = new IntConstant($1);
+  }
+| double_constant {
+    $$ = new FP32Constant($1);
+  }
+| OPENPARENS expression CLOSEPARENS {
+    $$ = $2;
+  }
 ;
 
 field_ref
-: IDENT offset_list
+: IDENT offset_list {
+    Grid *G = static_cast<SSPParser*>(State)->getGrid();
+    Field *F = G->getFieldByName(*$1);
+    $$ = new FieldRef(F, *$2);
+    delete $2;
+  }
 ;
 
 offset_list
-: dim_offset offset_list
-| dim_offset
+: dim_offset offset_list {
+    $$ = $2;
+    $$->push_back(new IntConstant($1));
+  }
+| dim_offset {
+    $$ = new std::vector<IntConstant*>();
+    $$->push_back(new IntConstant($1));
+  }
 ;
 
 dim_offset
-: OPENBRACE int_constant CLOSEBRACE
+: OPENBRACE int_constant CLOSEBRACE {
+    $$ = $2;
+  }
 ;
 
 int_constant
-: MINUS INTCONST
-| INTCONST
+: MINUS INTCONST {
+    $$ = -$2;
+  }
+| INTCONST {
+    $$ = $1;
+  }
 ;
 
 double_constant
-: DOUBLECONST
+: DOUBLECONST {
+    $$ = $1;
+  }
 ;
 
 type
-: FLOAT
-| DOUBLE
+: FLOAT {
+    $$ = new FP32Type();
+  }
+| DOUBLE {
+    llvm_unreachable("Double is not supported!");
+    $$ = NULL;
+  }
 ;
 
 copy_semantic

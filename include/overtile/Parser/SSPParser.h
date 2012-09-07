@@ -6,8 +6,11 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/system_error.h"
 #include <vector>
+#include <cassert>
 
 namespace overtile {
+
+class Grid;
 
 class SSPParser {
 public:
@@ -22,11 +25,25 @@ public:
   /// getNextToken - Returns the next token in the input stream (INTERNAL USE ONLY)
   int getNextToken(void *Val);
 
+  /// getGrid - Returns the Grid parsed from the specification.
+  Grid *getGrid() {
+    assert(G && "Grid is NULL");
+    return G;
+  }
+
+
+  // INTERNAL PARSER METHODS
+  void setGrid(Grid *GD) {
+    assert(G == NULL && "Grid already set");
+    G = GD;
+  }
+  
 private:
-  unsigned                      CurPos;
-  llvm::MemoryBuffer           *Buf;
-  llvm::SourceMgr              &SrcMgr;
-  std::vector<llvm::StringRef>  InternedStrings;
+  unsigned                       CurPos;
+  llvm::MemoryBuffer            *Buf;
+  llvm::SourceMgr               &SrcMgr;
+  std::vector<llvm::StringRef*>  InternedStrings;
+  Grid                          *G;                                               
 };
 
 inline int SSPlex(void *Val, void *Data) {
