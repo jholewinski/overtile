@@ -12,6 +12,7 @@ class ConstantExpr;
 class ElementType;
 class Expression;
 class FieldRef;
+class FunctionCall;
 
 /**
  * Back-end code generator for Cuda.
@@ -36,6 +37,7 @@ private:
   unsigned codegenExpr(Expression *Expr, llvm::raw_ostream &OS, unsigned &TempIdx);
   unsigned codegenBinaryOp(BinaryOp *Op, llvm::raw_ostream &OS, unsigned &TempIdx);
   unsigned codegenFieldRef(FieldRef *Ref, llvm::raw_ostream &OS, unsigned &TempIdx);
+  unsigned codegenFunctionCall(FunctionCall *FC, llvm::raw_ostream &OS, unsigned &TempIdx);
   unsigned codegenConstant(ConstantExpr *Expr, llvm::raw_ostream &OS, unsigned &TempIdx);
 };
 

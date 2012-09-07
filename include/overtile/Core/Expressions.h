@@ -2,6 +2,7 @@
 #ifndef OVERTILE_CORE_EXPRESSIONS_H
 #define OVERTILE_CORE_EXPRESSIONS_H
 
+#include "llvm/ADT/StringRef.h"
 #include <vector>
 #include <set>
 #include <string>
@@ -18,6 +19,7 @@ public:
   enum ExprKind {
     BinOp,
     FieldRef,
+    FunctionCall,
     IntConst,
     FP32Const
   };
@@ -99,11 +101,38 @@ public:
     return E->getClassType() == Expression::FieldRef;
   }
   
-public:
+private:
 
   Field                     *TheField;
   std::vector<IntConstant*>  Offsets;
 };
+
+
+/**
+ * A function call expression.
+ */
+class FunctionCall : public Expression {
+public:
+  FunctionCall(llvm::StringRef                 FuncName,
+               const std::vector<Expression*>& Params);
+  virtual ~FunctionCall();
+
+  llvm::StringRef getName() const { return Name; }
+  const std::vector<Expression*> &getParameters() const { return Exprs; }
+
+  virtual void getFields(std::set<Field*> &Fields) const {}
+  
+  static inline bool classof(const FunctionCall*) { return true; }
+  static inline bool classof(const Expression* E) {
+    return E->getClassType() == Expression::FunctionCall;
+  }
+  
+private:
+
+  std::vector<Expression*> Exprs;
+  std::string              Name;
+};
+
 
 
 /**

@@ -673,6 +673,8 @@ unsigned CudaBackEnd::codegenExpr(Expression *Expr, llvm::raw_ostream &OS,
     return codegenBinaryOp(Op, OS, TempIdx);
   } else if (FieldRef *Ref = dyn_cast<FieldRef>(Expr)) {
     return codegenFieldRef(Ref, OS, TempIdx);
+  } else if (FunctionCall *FC = dyn_cast<FunctionCall>(Expr)) {
+    return codegenFunctionCall(FC, OS, TempIdx);
   } else if (ConstantExpr *C = dyn_cast<ConstantExpr>(Expr)) {
     return codegenConstant(C, OS, TempIdx);
   } else {
@@ -746,6 +748,30 @@ unsigned CudaBackEnd::codegenFieldRef(FieldRef *Ref, llvm::raw_ostream &OS,
   // @FIXME: Hard-coded float!
   OS << "float temp" << TempIdx << " = *(" << Prefix << Name
      << " + AddrOffset);\n";
+  
+  return TempIdx++;
+}
+
+unsigned CudaBackEnd::codegenFunctionCall(FunctionCall      *FC,
+                                          llvm::raw_ostream &OS,
+                                          unsigned &TempIdx) {
+  
+  const std::vector<Expression*> Exprs = FC->getParameters();
+  StringRef Name = FC->getName();
+
+  std::vector<unsigned> Temps;
+  
+  for (unsigned i = 0, e = Exprs.size(); i != e; ++i) {
+    Temps.push_back(codegenExpr(Exprs[i], OS, TempIdx));
+  }
+
+  // @FIXME: Hard-coded float!
+  OS << "float temp" << TempIdx << " = " << Name << "(";
+  for (unsigned i = 0, e = Temps.size(); i != e; ++i) {
+    if (i > 0) OS << ", ";
+    OS << "temp" << i;
+  }
+  OS << ");\n";
   
   return TempIdx++;
 }

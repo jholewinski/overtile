@@ -60,6 +60,15 @@ void FieldRef::getFields(std::set<Field*> &Fields) const {
   Fields.insert(TheField);
 }
 
+FunctionCall::FunctionCall(StringRef                       FuncName,
+                           const std::vector<Expression*>& Params)
+  : Expression(Expression::FunctionCall), Name(FuncName), Exprs(Params) {
+  assert(Name.size() > 0 && "Name cannot be empty");
+}
+
+FunctionCall::~FunctionCall() {
+}
+
 
 ConstantExpr::ConstantExpr(unsigned ExKind)
   : Expression(ExKind) {

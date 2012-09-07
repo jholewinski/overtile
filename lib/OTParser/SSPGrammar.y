@@ -31,11 +31,12 @@ void SSPerror(SSPParser*, const char*);
   long IntConst;
   double DoubleConst;
 
-  overtile::Expression *Expr;
-  overtile::ElementType *Type;
+  overtile::Expression                *Expr;
+  overtile::ElementType               *Type;
   std::vector<overtile::IntConstant*> *IntList;
-  std::pair<unsigned, unsigned> *Bound;
+  std::pair<unsigned, unsigned>       *Bound;
   std::vector<std::pair<unsigned, unsigned> > *BoundList;
+  std::vector<overtile::Expression*>  *ExprList;
 }
 
 %token DOUBLE
@@ -70,6 +71,7 @@ void SSPerror(SSPParser*, const char*);
 %type<Type> type
 %type<Bound> application_bound
 %type<BoundList> application_bounds
+%type<ExprList> expr_list
 
 %%
 
@@ -189,14 +191,29 @@ unary_expr
 | double_constant {
     $$ = new FP32Constant($1);
   }
+| IDENT OPENPARENS expr_list CLOSEPARENS {
+    $$ = new FunctionCall(*$1, *$3);
+    delete $3;
+  }
 | OPENPARENS expression CLOSEPARENS {
     $$ = $2;
   }
 ;
 
+expr_list
+: expression COMMA expr_list {
+    $$ = $3;
+    $$->push_back($1);
+  }
+| expression {
+    $$ = new std::vector<Expression*>();
+    $$->push_back($1);
+  }
+;
+
 field_ref
 : IDENT offset_list {
-    Grid *G = Parser->getGrid();
+    Grid  *G = Parser->getGrid();
     Field *F = G->getFieldByName(*$1);
 
     if (F == NULL) {
