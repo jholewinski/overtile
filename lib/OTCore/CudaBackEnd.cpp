@@ -858,6 +858,8 @@ void CudaBackEnd::codegenFieldRefLoad(FieldRef *Ref, llvm::raw_ostream &OS,
   // @FIXME: Hard-coded float!
   OS << "float " << VarName << " = *(" << Prefix << Name
      << " + AddrOffset);\n";
+
+  Idents.insert(VarName);
 }
 
 
