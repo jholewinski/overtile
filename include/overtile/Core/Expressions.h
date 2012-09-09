@@ -11,6 +11,8 @@ namespace overtile {
 
 class Field;
 
+class PlaceHolderExpr;
+
 /**
  * Base class for all expression types.
  */
@@ -21,7 +23,8 @@ public:
     FieldRef,
     FunctionCall,
     IntConst,
-    FP32Const
+    FP32Const,
+    PlaceHolder
   };
   
   Expression(unsigned ClassType);
@@ -29,6 +32,10 @@ public:
 
   virtual void getFields(std::set<Field*> &Fields) const = 0;
 
+  virtual void replacePlaceHolder(llvm::StringRef Name, Expression *Expr) = 0;
+
+  virtual void getPlaceHolders(std::vector<PlaceHolderExpr*> &PH) const = 0;
+  
   unsigned getClassType() const { return ClassType; }
   static inline bool classof(const Expression*) { return true; }
   
@@ -57,6 +64,10 @@ public:
   virtual ~BinaryOp();
 
   virtual void getFields(std::set<Field*> &Fields) const;
+
+  virtual void replacePlaceHolder(llvm::StringRef Name, Expression *Expr);
+
+  virtual void getPlaceHolders(std::vector<PlaceHolderExpr*> &PH) const;
 
   //==-- Accessors --========================================================= //
   Operator getOperator() const { return Op; }
@@ -91,6 +102,10 @@ public:
 
   virtual void getFields(std::set<Field*> &Fields) const;
 
+  virtual void replacePlaceHolder(llvm::StringRef Name, Expression *Expr) {}
+
+  virtual void getPlaceHolders(std::vector<PlaceHolderExpr*> &PH) const {}
+
   Field *getField() { return TheField; }
   const Field *getField() const { return TheField; }
 
@@ -121,7 +136,11 @@ public:
   const std::vector<Expression*> &getParameters() const { return Exprs; }
 
   virtual void getFields(std::set<Field*> &Fields) const {}
-  
+
+  virtual void replacePlaceHolder(llvm::StringRef Name, Expression *Expr);
+
+  virtual void getPlaceHolders(std::vector<PlaceHolderExpr*> &PH) const;
+
   static inline bool classof(const FunctionCall*) { return true; }
   static inline bool classof(const Expression* E) {
     return E->getClassType() == Expression::FunctionCall;
@@ -144,6 +163,11 @@ public:
   virtual ~ConstantExpr();
 
   virtual void getFields(std::set<Field*> &Fields) const {}
+
+  virtual void replacePlaceHolder(llvm::StringRef Name, Expression *Expr) {}
+
+  virtual void getPlaceHolders(std::vector<PlaceHolderExpr*> &PH) const {}
+
   
   virtual std::string getStringValue() const = 0;
 
@@ -201,7 +225,32 @@ private:
   std::string StringValue;
   
 };
-  
+
+
+class PlaceHolderExpr : public Expression {
+public:
+  PlaceHolderExpr(llvm::StringRef Ident);
+  virtual ~PlaceHolderExpr();
+
+  virtual void getFields(std::set<Field*> &Fields) const {}
+
+  virtual void replacePlaceHolder(llvm::StringRef Name, Expression *Expr);
+
+  virtual void getPlaceHolders(std::vector<PlaceHolderExpr*> &PH) const {
+    PH.push_back(const_cast<PlaceHolderExpr*>(this));
+  }
+
+  llvm::StringRef getName() { return Name; }
+
+  static inline bool classof(const PlaceHolderExpr*) { return true; }
+  static inline bool classof(const Expression* E) {
+    return E->getClassType() == Expression::PlaceHolder;
+  }
+
+private:
+
+  std::string Name;
+};
 
 }
 

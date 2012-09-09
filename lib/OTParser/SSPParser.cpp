@@ -115,6 +115,8 @@ int SSPParser::getNextToken(void *Val) {
       return INOUT;
     } else if (Str->compare("is")       == 0) {
       return IS;
+    } else if (Str->compare("let")      == 0) {
+      return LET;
     } else if (Str->compare("out")      == 0) {
       return OUT;
     } else if (Str->compare("program")  == 0) {

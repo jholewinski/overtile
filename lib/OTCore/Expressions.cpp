@@ -4,6 +4,8 @@
 #include "overtile/Core/Field.h"
 #include "overtile/Core/Grid.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <sstream>
 #include <cassert>
 #include <cstdlib>
@@ -34,6 +36,34 @@ void BinaryOp::getFields(std::set<Field*> &Fields) const {
   LHS->getFields(Fields);
   RHS->getFields(Fields);
 }
+
+void BinaryOp::replacePlaceHolder(llvm::StringRef Name, Expression *Expr) {
+  if (PlaceHolderExpr *PH = dyn_cast<PlaceHolderExpr>(LHS)) {
+    if (PH->getName().compare(Name) == 0) {
+      
+      delete PH;
+      LHS = Expr;
+    }
+  } else {
+    LHS->replacePlaceHolder(Name, Expr);
+  }
+
+  if (PlaceHolderExpr *PH = dyn_cast<PlaceHolderExpr>(RHS)) {
+    if (PH->getName().compare(Name) == 0) {
+      
+      delete PH;
+      RHS = Expr;
+    }
+  } else {
+    RHS->replacePlaceHolder(Name, Expr);
+  }
+}
+
+void BinaryOp::getPlaceHolders(std::vector<PlaceHolderExpr*> &PH) const {
+  LHS->getPlaceHolders(PH);
+  RHS->getPlaceHolders(PH);
+}
+
 
 FieldRef::FieldRef(Field *F, const std::vector<IntConstant*>& Off)
   : Expression(Expression::FieldRef), TheField(F), Offsets(Off) {
@@ -67,6 +97,28 @@ FunctionCall::FunctionCall(StringRef                       FuncName,
 }
 
 FunctionCall::~FunctionCall() {
+}
+
+void FunctionCall::replacePlaceHolder(llvm::StringRef Name, Expression *Expr) {
+
+  for (unsigned i = 0, e = Exprs.size(); i != e; ++i) {
+    if (PlaceHolderExpr *PH = dyn_cast<PlaceHolderExpr>(Exprs[i])) {
+      
+      if (PH->getName().compare(Name) == 0) {
+      
+        delete PH;
+        Exprs[i] = Expr;
+      }
+    } else {
+      Exprs[i]->replacePlaceHolder(Name, Expr);
+    }    
+  }
+}
+
+void FunctionCall::getPlaceHolders(std::vector<PlaceHolderExpr*> &PH) const {
+  for (unsigned i = 0, e = Exprs.size(); i != e; ++i) {
+    Exprs[i]->getPlaceHolders(PH);
+  }
 }
 
 
@@ -110,6 +162,17 @@ IntConstant::IntConstant(int V)
 IntConstant::~IntConstant() {
 }
 
+
+PlaceHolderExpr::PlaceHolderExpr(llvm::StringRef Ident)
+  : Expression(Expression::PlaceHolder), Name(Ident) {
+}
+
+PlaceHolderExpr::~PlaceHolderExpr() {
+}
+
+void PlaceHolderExpr::replacePlaceHolder(llvm::StringRef Name, Expression *Expr) {
+  report_fatal_error("replacePlaceHolder called in PlaceHolderExpr");
+}
 
 }
 

@@ -46,6 +46,7 @@ void SSPerror(SSPParser*, const char*);
 %token IN
 %token INOUT
 %token IS
+%token LET
 %token OUT
 %token PROGRAM
 %token<Ident> IDENT
@@ -120,6 +121,21 @@ application_def
     Expression *E = $4;
     Function *Func = new Function(Out, E);
 
+    std::vector<PlaceHolderExpr*> PHExpr;
+    E->getPlaceHolders(PHExpr);
+
+    for (unsigned i = 0, e = PHExpr.size(); i != e; ++i) {
+      std::string        Msg;
+      raw_string_ostream MsgStr(Msg);
+      MsgStr << "Unknown reference: '" << PHExpr[i]->getName() << "'";
+      MsgStr.flush();
+      yyerror(Parser, Msg.c_str());
+    }
+
+    if (PHExpr.size() > 0) {
+      YYERROR;
+    }
+
     std::vector<std::pair<unsigned, unsigned> > *Bounds = $2;
     for (unsigned i = 0, e = Bounds->size(); i < e; ++i) {
       std::pair<unsigned, unsigned> B = (*Bounds)[i];
@@ -155,6 +171,10 @@ expression
 : additive_expr {
     $$ = $1;
   }
+| LET IDENT EQUALS expression IN expression {
+    $$ = $6;
+    $$->replacePlaceHolder(*$2, $4);    
+  }
 ;
 
 additive_expr
@@ -184,6 +204,9 @@ multiplicative_expr
 unary_expr
 : field_ref {
     $$ = $1;
+  }
+| IDENT {
+    $$ = new PlaceHolderExpr(*$1);
   }
 | int_constant {
     $$ = new IntConstant($1);

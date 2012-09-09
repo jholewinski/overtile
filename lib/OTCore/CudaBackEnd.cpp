@@ -7,7 +7,6 @@
 #include "overtile/Core/Types.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <cassert>
 #include <cmath>
 
 using namespace llvm;
@@ -693,6 +692,7 @@ void CudaBackEnd::codegenExpr(Expression *Expr, llvm::raw_ostream &OS) {
   } else if (ConstantExpr *C = dyn_cast<ConstantExpr>(Expr)) {
     return codegenConstant(C, OS);
   } else {
+    report_fatal_error("Unhandled expression in CudaBackEnd::codegenExpr");
     llvm_unreachable("Unhandled expression");
   }
 }
