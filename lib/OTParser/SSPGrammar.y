@@ -225,6 +225,7 @@ unary_expr
     $$ = new FP32Constant($1);
   }
 | IDENT OPENPARENS expr_list CLOSEPARENS {
+    std::reverse($3->begin(), $3->end());
     $$ = new FunctionCall(*$1, *$3);
     delete $3;
   }
