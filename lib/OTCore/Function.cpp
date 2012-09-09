@@ -198,6 +198,9 @@ public:
       visitFieldRef(Ref);
     } else if (ConstantExpr *C = dyn_cast<ConstantExpr>(Expr)) {
       // Do nothing
+    } else if (FunctionCall *FC = dyn_cast<FunctionCall>(Expr)) {
+      // Attribute one flop for function calls
+      Flops = Flops + 1.0;
     } else {
       assert(0 && "Unhandled expression type");
     }
