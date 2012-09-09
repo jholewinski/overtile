@@ -262,8 +262,9 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
     }
     OS << ";\n";
 
-    OS << "AddrOffset = max(AddrOffset, 0);\n";
-    OS << "AddrOffset = min(AddrOffset, array_size-1);\n";
+    // Min-max shouldn't be needed
+    //OS << "AddrOffset = max(AddrOffset, 0);\n";
+    //OS << "AddrOffset = min(AddrOffset, array_size-1);\n";
   
     // @FIXME: Hard-coded float!
     OS << "float temp = *(In_" << Out->getName()
@@ -847,11 +848,12 @@ void CudaBackEnd::codegenFieldRefLoad(FieldRef *Ref, llvm::raw_ostream &OS,
     ++Dim;
   }
   OS << ";\n";
-  
-  if (!UseShared) {
-    OS << "AddrOffset = max(AddrOffset, 0);\n";
-    OS << "AddrOffset = min(AddrOffset, array_size-1);\n";
-  }
+
+  // Min-max shouldn't be needed
+  //if (!UseShared) {
+  //  OS << "AddrOffset = max(AddrOffset, 0);\n";
+  //  OS << "AddrOffset = min(AddrOffset, array_size-1);\n";
+  //}
   
   // @FIXME: Hard-coded float!
   OS << "float " << VarName << " = *(" << Prefix << Name

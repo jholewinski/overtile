@@ -90,6 +90,8 @@ FP32Constant::FP32Constant(float V)
   if (Val.find('.') == std::string::npos) {
     Val             += ".0";
   }
+
+  Val += "f";
   
   StringValue = std::string(Val);
 }
