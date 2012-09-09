@@ -96,7 +96,8 @@ int SSPParser::getNextToken(void *Val) {
       Length++;
       CurPos++;
       CurCh = Data+CurPos;
-    } while (CurPos < BufferData.size() && IsAlphaOrDigit(*CurCh));
+
+    } while (CurPos < BufferData.size() && (IsAlphaOrDigit(*CurCh) || *CurCh == '_'));
 
     StringRef *Str = new StringRef(Start, Length);
 
