@@ -34,11 +34,14 @@ private:
   
   static std::string getTypeName(const ElementType *Ty);
 
-  unsigned codegenExpr(Expression *Expr, llvm::raw_ostream &OS, unsigned &TempIdx);
-  unsigned codegenBinaryOp(BinaryOp *Op, llvm::raw_ostream &OS, unsigned &TempIdx);
-  unsigned codegenFieldRef(FieldRef *Ref, llvm::raw_ostream &OS, unsigned &TempIdx);
-  unsigned codegenFunctionCall(FunctionCall *FC, llvm::raw_ostream &OS, unsigned &TempIdx);
-  unsigned codegenConstant(ConstantExpr *Expr, llvm::raw_ostream &OS, unsigned &TempIdx);
+  void codegenExpr(Expression *Expr, llvm::raw_ostream &OS);
+  void codegenBinaryOp(BinaryOp *Op, llvm::raw_ostream &OS);
+  void codegenFieldRef(FieldRef *Ref, llvm::raw_ostream &OS);
+  void codegenFunctionCall(FunctionCall *FC, llvm::raw_ostream &OS);
+  void codegenConstant(ConstantExpr *Expr, llvm::raw_ostream &OS);
+
+  void codegenLoads(Expression *Expr, llvm::raw_ostream &OS, std::set<std::string> &Idents);
+  void codegenFieldRefLoad(FieldRef *Ref, llvm::raw_ostream &OS, std::set<std::string> &Idents);
 };
 
 }

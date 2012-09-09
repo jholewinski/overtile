@@ -41,6 +41,8 @@ void CudaBackEnd::codegen(llvm::raw_ostream &OS) {
 void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
 
   WrittenFields.clear();
+
+  std::set<std::string> Idents;
   
   Grid                 *G         = getGrid();
   std::list<Function*>  Functions = G->getFunctionList();
@@ -219,15 +221,22 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
          << " < Dim_" << i << " - " << Bounds[i].second << ")";
     }
     OS << ") {\n";
-    unsigned Temp = 0;
-    OS << "{\n";
-    Temp          = codegenExpr(F->getExpression(), OS, Temp);
 
+    OS << "{\n";
+
+    Idents.clear();
+    codegenLoads(F->getExpression(), OS, Idents);
+
+    // @FIXME: Hard-coded float
+    OS << "  float Res = ";
+    codegenExpr(F->getExpression(), OS);
+    OS << ";\n";
+    
     OS << "  Buffer_" << Out->getName();
     for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
       OS << "[elem_" << (G->getNumDimensions()-i-1) << "]";
     }
-    OS << " = temp" << Temp << ";\n";
+    OS << " = Res;\n";
     
     OS << "  }\n";
     OS << "} else if (";
@@ -344,15 +353,21 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
       }
     }
 
-    unsigned Temp = 0;
     OS << "{\n";
-    Temp          = codegenExpr(F->getExpression(), OS, Temp);
+
+    Idents.clear();
+    codegenLoads(F->getExpression(), OS, Idents);
+
+    // @FIXME: Hard-coded float
+    OS << "  float Res = ";
+    codegenExpr(F->getExpression(), OS);
+    OS << ";\n";
+
     OS << "    Buffer_" << Out->getName();
     for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
       OS << "[elem_" << (G->getNumDimensions()-i-1) << "]";
     }    
-    OS << " = temp" << Temp;
-    OS << ";\n";
+    OS << " = Res;\n";
 
 
 
@@ -667,27 +682,24 @@ std::string CudaBackEnd::getTypeName(const ElementType *Ty) {
   }
 }
 
-unsigned CudaBackEnd::codegenExpr(Expression *Expr, llvm::raw_ostream &OS,
-                                  unsigned &TempIdx) {
+void CudaBackEnd::codegenExpr(Expression *Expr, llvm::raw_ostream &OS) {
   if (BinaryOp *Op = dyn_cast<BinaryOp>(Expr)) {
-    return codegenBinaryOp(Op, OS, TempIdx);
+    return codegenBinaryOp(Op, OS);
   } else if (FieldRef *Ref = dyn_cast<FieldRef>(Expr)) {
-    return codegenFieldRef(Ref, OS, TempIdx);
+    return codegenFieldRef(Ref, OS);
   } else if (FunctionCall *FC = dyn_cast<FunctionCall>(Expr)) {
-    return codegenFunctionCall(FC, OS, TempIdx);
+    return codegenFunctionCall(FC, OS);
   } else if (ConstantExpr *C = dyn_cast<ConstantExpr>(Expr)) {
-    return codegenConstant(C, OS, TempIdx);
+    return codegenConstant(C, OS);
   } else {
     llvm_unreachable("Unhandled expression");
   }
 }
 
-unsigned CudaBackEnd::codegenBinaryOp(BinaryOp *Op, llvm::raw_ostream &OS,
-                                      unsigned &TempIdx) {
-  unsigned                                      L = codegenExpr(Op->getLHS(), OS, TempIdx);
-  unsigned                                      R = codegenExpr(Op->getRHS(), OS, TempIdx);
-  // @FIXME: Hard-coded float!
-  OS << "float temp" << TempIdx << " = temp" << L;
+void CudaBackEnd::codegenBinaryOp(BinaryOp *Op, llvm::raw_ostream &OS) {
+
+  OS << "(";
+  codegenExpr(Op->getLHS(), OS);
   switch (Op->getOperator()) {
     default: assert(0 && "Unhandled binary operator"); break;
     case BinaryOp::ADD: OS << "+"; break;
@@ -695,33 +707,129 @@ unsigned CudaBackEnd::codegenBinaryOp(BinaryOp *Op, llvm::raw_ostream &OS,
     case BinaryOp::MUL: OS << "*"; break;
     case BinaryOp::DIV: OS << "/"; break;
   }
-  OS << "temp" << R << ";\n";
-  return TempIdx++;
+  codegenExpr(Op->getRHS(), OS);
+  OS << ")";
 }
 
-unsigned CudaBackEnd::codegenFieldRef(FieldRef *Ref, llvm::raw_ostream &OS,
-                                      unsigned &TempIdx) {
-  Field                                        *F       = Ref->getField();
-  const std::vector<IntConstant*>               Offsets = Ref->getOffsets();
+void CudaBackEnd::codegenFieldRef(FieldRef *Ref, llvm::raw_ostream &OS) {
 
-  std::string Prefix;
-
-  bool UseShared = true;
-
+  Field                           *F       = Ref->getField();
+  const std::vector<IntConstant*>  Offsets = Ref->getOffsets();
+  
   std::string Name = F->getName();
+
+  // Determine canonical variable name for this reference
+  std::string              VarName;
+  llvm::raw_string_ostream VarNameStr(VarName);
+
+  VarNameStr << Name;
+  
+  for (unsigned i = 0, e = Offsets.size(); i != e; ++i) {
     
+    long Off = Offsets[i]->getValue();
+
+    if (Off == 0)
+      VarNameStr << "_0";
+    else if (Off > 0)
+      VarNameStr << "_p" << Off;
+    else
+      VarNameStr << "_m" << (-Off);
+  }
+
+  VarNameStr.flush();
+
+  OS << VarName;
+}
+
+void CudaBackEnd::codegenFunctionCall(FunctionCall *FC,
+                                      llvm::raw_ostream &OS) {
+  
+  const std::vector<Expression*> Exprs = FC->getParameters();
+  StringRef                      Name  = FC->getName();
+
+  OS << Name << "(";
+  for (unsigned i = 0, e = Exprs.size(); i != e; ++i) {
+    if (i > 0) OS << ", ";
+    codegenExpr(Exprs[i], OS);
+  }
+  OS << ");\n";
+}
+
+void CudaBackEnd::
+codegenConstant(ConstantExpr *Expr, llvm::raw_ostream &OS) {
+  OS << Expr->getStringValue();
+}
+
+
+
+void CudaBackEnd::codegenLoads(Expression *Expr, llvm::raw_ostream &OS,
+                               std::set<std::string> &Idents) {
+  if (FieldRef *Ref = dyn_cast<FieldRef>(Expr)) {
+    codegenFieldRefLoad(Ref, OS, Idents);
+  } else if (BinaryOp *Op = dyn_cast<BinaryOp>(Expr)) {
+    codegenLoads(Op->getLHS(), OS, Idents);
+    codegenLoads(Op->getRHS(), OS, Idents);
+  } else if (ConstantExpr *C = dyn_cast<ConstantExpr>(Expr)) {
+    /* Do nothing */
+  } else if (FunctionCall *FC = dyn_cast<FunctionCall>(Expr)) {
+
+    const std::vector<Expression*> &Exprs = FC->getParameters();
+    
+    for (unsigned i = 0, e = Exprs.size(); i != e; ++i) {
+      codegenLoads(Exprs[i], OS, Idents);
+    }
+  } else {
+    llvm_unreachable("Unhandled expr type");
+  }
+}
+
+void CudaBackEnd::codegenFieldRefLoad(FieldRef *Ref, llvm::raw_ostream &OS,
+                                      std::set<std::string> &Idents) {
+
+  Field                           *F       = Ref->getField();
+  const std::vector<IntConstant*>  Offsets = Ref->getOffsets();
+  std::string                      Prefix;
+  
+  bool UseShared = true;
+  
+  std::string Name = F->getName();
+
+  // Determine canonical variable name for this reference
+  std::string              VarName;
+  llvm::raw_string_ostream VarNameStr(VarName);
+
+  VarNameStr << Name;
+  
+  for (unsigned i = 0, e = Offsets.size(); i != e; ++i) {
+    
+    long Off = Offsets[i]->getValue();
+
+    if (Off == 0)
+      VarNameStr << "_0";
+    else if (Off > 0)
+      VarNameStr << "_p" << Off;
+    else
+      VarNameStr << "_m" << (-Off);
+  }
+
+  VarNameStr.flush();
+
+  // If we have already code-gen'd this load, then skip it
+  if (Idents.count(VarName) > 0)
+    return;
+  
   if (InTS0 && WrittenFields.count(Name) == 0) UseShared = false;
   
   if (!UseShared) Prefix = "In_";
-  else Prefix       = "Shared_";
- 
-
+  else Prefix            = "Shared_";
+  
+    
   OS << "AddrOffset = ";
-
+  
   unsigned DimTerms = 0;
-
+  
   unsigned Dim    = 0;
-  for (std::vector<IntConstant*>::const_iterator I = Offsets.begin(),
+  for (std::vector<IntConstant*>::const_iterator I      = Offsets.begin(),
          E        = Offsets.end(), B = I; I != E; ++I) {
     int    Offset = (*I)->getValue();
     if (B != I) OS << " + ";
@@ -729,7 +837,7 @@ unsigned CudaBackEnd::codegenFieldRef(FieldRef *Ref, llvm::raw_ostream &OS,
       OS << "(thisid_" << Dim << "+" << (*I)->getValue() << ")";
     else
       OS << "((thislocal_" << Dim << "+" << (*I)->getValue() << ")+max_left_offset_" << Dim << ")";
-    for (unsigned i = 0; i < DimTerms; ++i) {
+    for (unsigned                          i          = 0; i < DimTerms; ++i) {
       if (!UseShared)
         OS << "*Dim_" << i;
       else
@@ -739,52 +847,16 @@ unsigned CudaBackEnd::codegenFieldRef(FieldRef *Ref, llvm::raw_ostream &OS,
     ++Dim;
   }
   OS << ";\n";
-
+  
   if (!UseShared) {
     OS << "AddrOffset = max(AddrOffset, 0);\n";
     OS << "AddrOffset = min(AddrOffset, array_size-1);\n";
   }
   
   // @FIXME: Hard-coded float!
-  OS << "float temp" << TempIdx << " = *(" << Prefix << Name
+  OS << "float " << VarName << " = *(" << Prefix << Name
      << " + AddrOffset);\n";
-  
-  return TempIdx++;
 }
 
-unsigned CudaBackEnd::codegenFunctionCall(FunctionCall      *FC,
-                                          llvm::raw_ostream &OS,
-                                          unsigned &TempIdx) {
-  
-  const std::vector<Expression*> Exprs = FC->getParameters();
-  StringRef Name = FC->getName();
-
-  std::vector<unsigned> Temps;
-  
-  for (unsigned i = 0, e = Exprs.size(); i != e; ++i) {
-    Temps.push_back(codegenExpr(Exprs[i], OS, TempIdx));
-  }
-
-  // @FIXME: Hard-coded float!
-  OS << "float temp" << TempIdx << " = " << Name << "(";
-  for (unsigned i = 0, e = Temps.size(); i != e; ++i) {
-    if (i > 0) OS << ", ";
-    OS << "temp" << i;
-  }
-  OS << ");\n";
-  
-  return TempIdx++;
-}
-
-unsigned CudaBackEnd::
-codegenConstant(ConstantExpr *Expr, llvm::raw_ostream &OS, unsigned &TempIdx) {
-  if (dyn_cast<FP32Constant>(Expr)) {
-    OS << "  float temp" << TempIdx << " = " << Expr->getStringValue() << "f;\n";
-  } else {
-    assert(0 && "Unknown type");
-  }
-
-  return TempIdx++;
-}
 
 }
