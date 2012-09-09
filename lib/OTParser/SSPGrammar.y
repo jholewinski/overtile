@@ -118,6 +118,16 @@ application_def
 : IDENT application_bounds EQUALS expression {
     Grid *G = Parser->getGrid();
     Field *Out = G->getFieldByName(*$1);
+
+    if (Out == NULL) {
+      std::string        Msg;
+      raw_string_ostream MsgStr(Msg);
+      MsgStr << "Field '" << (*$1) << "' has not been defined";
+      MsgStr.flush();
+      yyerror(Parser, Msg.c_str());
+      YYERROR;
+    }
+
     Expression *E = $4;
     Function *Func = new Function(Out, E);
 
