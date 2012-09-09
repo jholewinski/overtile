@@ -2,7 +2,7 @@
 #ifndef OVERTILE_VERSION_H
 #define OVERTILE_VERSION_H
 
-#define OVERTILE_VERSION_SHORT "1.1"
-#define OVERTILE_VERSION_FULL "1.1-dev"
+#define OVERTILE_VERSION "1.1"
+#define OVERTILE_VERSION_RELEASE "final"
 
 #endif
