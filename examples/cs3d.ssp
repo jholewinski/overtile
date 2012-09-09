@@ -1,0 +1,50 @@
+
+program cs3d is
+
+grid 3
+
+field img float inout
+field sum float in
+
+img[1:1][1:1][1:1] = 
+  let ALPHA = 5.0 in
+  let EPS = 1.0e-8 in
+
+  let p1 = img[ 1][ 0][ 0] - img[ 0][ 0][ 0] in 
+  let p2 = img[ 0][ 1][ 0] - img[ 0][ 0][ 0] in
+  let p3 = img[ 0][ 0][ 1] - img[ 0][ 0][ 0] in
+
+  let c1 = img[0][0][0]*rsqrt(EPS + p1*p1 + 
+                                    p2*p2 + 
+                                    p3*p3)/sum[0][0][0] in
+
+  let p4 = img[ 0][ 0][ 0] - img[-1][ 0][ 0] in
+  let p5 = img[-1][ 1][ 0] - img[-1][ 0][ 0] in
+  let p6 = img[-1][ 0][ 1] - img[-1][ 0][ 0] in
+
+  let c2 = img[0][0][0]*rsqrt(EPS + p4*p4 + 
+                                           p5*p5 + 
+                                           p6*p6)/sum[0][0][0] in
+
+  let p7 = img[ 1][-1][ 0] - img[ 0][-1][ 0] in
+  let p8 = img[ 0][ 0][ 0] - img[ 0][-1][ 0] in
+  let p9 = img[ 0][-1][ 1] - img[ 0][-1][ 0] in
+
+  let c3 = img[0][0][0]*rsqrt(EPS + p7*p7 + 
+                                           p8*p8 + 
+                                           p9*p9)/sum[0][0][0] in
+
+  let p10 = img[ 1][ 0][-1] - img[ 0][ 0][-1] in
+  let p11 = img[ 0][ 1][-1] - img[ 0][ 0][-1] in
+  let p12 = img[ 0][ 0][ 0] - img[ 0][ 0][-1] in
+
+  let c4 = img[0][0][0]*rsqrt(EPS + p10*p10 + 
+                                           p11*p11 + 
+                                           p12*p12)/sum[0][0][0] in
+  (ALPHA*img[ 0][ 0][ 0] + 
+   c1*(img[ 1][ 0][ 0] + 
+   img[ 0][ 1][ 0] + 
+   img[ 0][ 0][ 1]) + 
+   c2*img[-1][ 0][ 0] + 
+   c3*img[ 0][-1][ 0] + 
+   c4*img[ 0][ 0][-1])/(ALPHA + 3.0*c1 + c2 + c3 + c4)
