@@ -753,7 +753,7 @@ void CudaBackEnd::codegenFunctionCall(FunctionCall *FC,
     if (i > 0) OS << ", ";
     codegenExpr(Exprs[i], OS);
   }
-  OS << ");\n";
+  OS << ")";
 }
 
 void CudaBackEnd::
