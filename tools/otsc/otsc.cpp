@@ -25,7 +25,7 @@ OutputFileName("out", cl::desc("Specify output filename"),
                cl::value_desc("filename"), cl::init("-"));
 
 static cl::opt<unsigned>
-TimeTileSize("time-tile", cl::desc("Specify time tile size"),
+TimeTileSize("t", cl::desc("Specify time tile size"),
              cl::value_desc("N"), cl::init(1));
 
 static cl::opt<unsigned>
