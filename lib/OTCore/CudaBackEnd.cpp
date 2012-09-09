@@ -552,7 +552,7 @@ void CudaBackEnd::codegenHost(llvm::raw_ostream &OS) {
 
     OS << "  Result = cudaMemcpy(device" << F->getName() << "_In, Host_" << F->getName() << ", sizeof(" << getTypeName(F->getElementType()) << ")*ArraySize, cudaMemcpyHostToDevice);\n";
     OS << "  assert(Result == cudaSuccess);\n";
-    OS << "  Result = cudaMemcpy(device" << F->getName() << "_Out, Host_" << F->getName() << ", sizeof(" << getTypeName(F->getElementType()) << ")*ArraySize, cudaMemcpyHostToDevice);\n";
+    OS << "  Result = cudaMemcpy(device" << F->getName() << "_Out, device" << F->getName() << "_In, sizeof(" << getTypeName(F->getElementType()) << ")*ArraySize, cudaMemcpyDeviceToDevice);\n";
     OS << "  assert(Result == cudaSuccess);\n";
   }  
 
