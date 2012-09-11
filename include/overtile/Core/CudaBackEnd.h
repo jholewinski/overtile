@@ -24,6 +24,9 @@ public:
 
   virtual void codegen(llvm::raw_ostream &OS);
 
+  virtual std::string getCanonicalPrototype();
+  virtual std::string getCanonicalInvocation();
+
 private:
 
   virtual void codegenDevice(llvm::raw_ostream &OS);

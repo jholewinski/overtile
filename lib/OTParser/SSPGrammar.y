@@ -77,7 +77,9 @@ void SSPerror(SSPParser*, const char*);
 %%
 
 top_level
-: PROGRAM IDENT IS grid_def field_list application_list
+: PROGRAM IDENT IS grid_def field_list application_list {
+    Parser->getGrid()->setName(*$2);
+  }
 ;
 
 grid_def

@@ -27,6 +27,9 @@ public:
 
   /// codegen - Generate code and write to stream \p OS.
   virtual void codegen(llvm::raw_ostream &OS) = 0;
+
+  virtual std::string getCanonicalPrototype() { return ""; }
+  virtual std::string getCanonicalInvocation() { return ""; }
   
   //==-- Accessors --========================================================= //
   
