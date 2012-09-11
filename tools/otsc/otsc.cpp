@@ -68,7 +68,31 @@ void PrintVersion() {
   errs() << "\n";
   cl::PrintVersionMessage();
 }
+
+struct SSPRegion {
+  size_t       FirstLine;
+  size_t       LastLine;
+  std::string  SSP;
+  BackEnd     *BE;
+};
+
+bool IsStartOfRegion(size_t  Line, const SmallVectorImpl<SSPRegion> &Regions,
+                     SSPRegion &Region) {
+  // Is this the start of a region?
+  for (unsigned ii = 0, ee = Regions.size(); ii != ee; ++ii) {
+        
+    const SSPRegion &Reg = Regions[ii];
+    if (Reg.FirstLine == Line) {
+      Region             = Reg;
+      return true;
+    }
+  }
+  return false;
 }
+}
+
+
+
 
 int main(int argc, char **argv) {
 
@@ -109,79 +133,108 @@ int main(int argc, char **argv) {
     StringRef Buffer      = CXXSource->getBuffer();
 
     std::vector<CudaBackEnd*> GridsToGenerate;
-    
+
+
+    // Lex up the file into lines
+    SmallVector<StringRef,64> Lines;
+
     while (Cursor < CXXSource->getBufferSize()) {
-      size_t Pragma = Buffer.find("#pragma overtile", Cursor);
-
-      size_t Size = Pragma-Cursor;
-      if (Pragma == StringRef::npos) {
-        Size = StringRef::npos;
-      }
-
-      if (Size > 0) {
-        Out->os() << Buffer.substr(Cursor, Size);
-      }
-      
-      if (Pragma != StringRef::npos) {
-
-        size_t NewLine = Buffer.find("\n", Pragma);
-        
-        if (NewLine == StringRef::npos) {
-          llvm::errs() << "No newline after #pragma overtile\n";
-          return 1;
-        }
-
-        StringRef PragmaLine = Buffer.substr(Pragma, NewLine-Pragma+1);
-
-
-        size_t End = Buffer.find("#pragma overtile end");
-        
-        if (End == StringRef::npos) {
-          llvm::errs() << "Missing #pragma overtile end\n";
-          return 1;
-        }
-
-        size_t EndNewLine = Buffer.find("\n", End);
-
-        StringRef SSP = Buffer.substr(NewLine+1, End-NewLine-1);
-
-        SourceMgr       SM;
-        SSPParser       P(MemoryBuffer::getMemBuffer(SSP, "embed", false), SM);
-        if (error_code f = P.parseBuffer()) {  
-          errs() << "Abort due to errors\n";
-          return 1;
-        }
-        
-        GridsToGenerate.push_back(new CudaBackEnd(P.getGrid()));
-
-        Out->os() << GridsToGenerate.back()->getCanonicalPrototype();
-        Out->os() << GridsToGenerate.back()->getCanonicalInvocation();
-        
-        Cursor = EndNewLine+1;
-      } else {
-        // No more pragmas
+      size_t    NewLine = Buffer.find("\n", Cursor);
+      if (NewLine == StringRef::npos) {
+        // There is not another newline, so just grab what we have left
+        StringRef L = Buffer.substr(Cursor, NewLine);
+        Lines.push_back(L);
         break;
+      } else {
+        StringRef L = Buffer.substr(Cursor, NewLine-Cursor+1);
+        Lines.push_back(L);
+        Cursor      = NewLine+1;
       }
     }
 
-
-    for (unsigned i = 0, e = GridsToGenerate.size(); i != e; ++i) {
-      
-      CudaBackEnd *BE = GridsToGenerate[i];
-      BE->setTimeTileSize(TimeTileSize);
-      BE->setBlockSize(0, BlockSizeX);
-      BE->setBlockSize(1, BlockSizeY);
-      BE->setBlockSize(2, BlockSizeZ);
-      BE->setElements(0, ElementsX);
-      BE->setElements(1, ElementsY);
-      BE->setElements(2, ElementsZ);
-      BE->setVerbose(Verbose);
-      BE->run();
-      BE->codegen(Out->os());
-
-      delete BE;
-    }
     
+    SmallVector<SSPRegion,2> Regions;
+
+    // Extract SSP regions
+    for (unsigned i = 0, e = Lines.size(); i != e; ++i) {
+      
+      bool Start = Lines[i].ltrim().startswith("#pragma overtile begin");
+
+      if (Start) {
+        SSPRegion Reg;
+        Reg.FirstLine = i;
+
+        ++i;
+        
+        for (; i != e; ++i) {
+
+          bool End = Lines[i].ltrim().startswith("#pragma overtile end");
+
+          if (End) {
+            Reg.LastLine  = i;
+            break;
+          } else {
+            Reg.SSP      += Lines[i].str();
+            if (i+1 == e) {
+              llvm::errs() << "No '#pragma overtile end' found\n";
+              return 1;
+            }
+          }
+        }
+
+        Regions.push_back(Reg);
+      }
+    }
+
+    // Create generators
+    for (unsigned i = 0, e = Regions.size(); i != e; ++i) {
+      
+      SSPRegion &Reg = Regions[i];
+
+      SourceMgr SM;
+
+      SSPParser P(MemoryBuffer::getMemBuffer(StringRef(Reg.SSP), "embedded"), SM);
+      if (error_code f = P.parseBuffer()) {
+        errs() << "Abort due to errors\n";
+        return 1;
+      }
+        
+      Reg.BE = new CudaBackEnd(P.getGrid());
+      Reg.BE->setTimeTileSize(TimeTileSize);
+      Reg.BE->setBlockSize(0, BlockSizeX);
+      Reg.BE->setBlockSize(1, BlockSizeY);
+      Reg.BE->setBlockSize(2, BlockSizeZ);
+      Reg.BE->setElements(0, ElementsX);
+      Reg.BE->setElements(1, ElementsY);
+      Reg.BE->setElements(2, ElementsZ);
+      Reg.BE->setVerbose(Verbose);
+      Reg.BE->run();
+    }
+
+    // Write output
+    for (unsigned i = 0, e = Lines.size(); i != e; ++i) {
+
+      SSPRegion Reg;
+      if (IsStartOfRegion(i, Regions, Reg)) {
+        i = Reg.LastLine;
+        Out->os() << "////// BEGIN OVERTILE CODEGEN\n";
+        Out->os() << Reg.BE->getCanonicalPrototype();
+        Out->os() << Reg.BE->getCanonicalInvocation();
+        Out->os() << "////// END OVERTILE CODEGEN\n";
+      } else {
+        Out->os() << Lines[i];
+      }
+    }
+
+    // Write generated code
+    Out->os() << "\n\n";
+    Out->os() << "////// BEGIN OVERTILE GENERATED CODE\n";
+    
+    for (unsigned i = 0, e = Regions.size(); i != e; ++i) {
+      
+      SSPRegion &Reg = Regions[i];
+      Reg.BE->codegen(Out->os());
+    }
   } else {
     // Input is just pure SSP, so codegen just the SSP
     OwningPtr<Grid> G;
