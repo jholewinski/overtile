@@ -54,6 +54,11 @@ ElementsZ("ez", cl::desc("Specify elements per thread (Z)"),
           cl::value_desc("N"), cl::init(1));
 
 
+static cl::opt<bool>
+Verbose("v", cl::desc("Print verbose output"),
+        cl::init(false));
+
+
 namespace {
 void PrintVersion() {
   errs() << "otsc - OverTile Stencil Compiler\n";
@@ -100,6 +105,7 @@ int main(int argc, char **argv) {
   BE.setElements(0, ElementsX);
   BE.setElements(1, ElementsY);
   BE.setElements(2, ElementsZ);
+  BE.setVerbose(Verbose);
   BE.run();
   
   std::string Err;
