@@ -142,7 +142,7 @@ int SSPParser::getNextToken(void *Val) {
       
     } while (CurPos < BufferData.size() && (IsDigit(*CurCh) || *CurCh == '.'));
 
-    if (CurPos < BufferData.size() && *CurCh == 'e') {
+    if (CurPos < BufferData.size() && (*CurCh == 'e' || *CurCh == 'E')) {
       // Start of an exponent
 
       IsFloat = true;
