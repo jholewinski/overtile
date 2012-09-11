@@ -25,7 +25,7 @@ public:
   virtual void codegen(llvm::raw_ostream &OS);
 
   virtual std::string getCanonicalPrototype();
-  virtual std::string getCanonicalInvocation();
+  virtual std::string getCanonicalInvocation(llvm::StringRef TimeStepExpr);
 
 private:
 

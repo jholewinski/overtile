@@ -10,6 +10,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/system_error.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -30,15 +31,15 @@ TimeTileSize("t", cl::desc("Specify time tile size"),
 
 static cl::opt<unsigned>
 BlockSizeX("x", cl::desc("Specify block size (X)"),
-           cl::value_desc("N"));
+           cl::value_desc("N"), cl::init(8));
 
 static cl::opt<unsigned>
 BlockSizeY("y", cl::desc("Specify block size (Y)"),
-           cl::value_desc("N"));
+           cl::value_desc("N"), cl::init(8));
 
 static cl::opt<unsigned>
 BlockSizeZ("z", cl::desc("Specify block size (Z)"),
-           cl::value_desc("N"));
+           cl::value_desc("N"), cl::init(8));
 
 
 static cl::opt<unsigned>
@@ -74,6 +75,7 @@ struct SSPRegion {
   size_t       LastLine;
   std::string  SSP;
   BackEnd     *BE;
+  std::string  TimeStepsExpr;
 };
 
 bool IsStartOfRegion(size_t  Line, const SmallVectorImpl<SSPRegion> &Regions,
@@ -131,8 +133,6 @@ int main(int argc, char **argv) {
     size_t    Cursor      = 0;
     bool      StartOfLine = true;
     StringRef Buffer      = CXXSource->getBuffer();
-
-    std::vector<CudaBackEnd*> GridsToGenerate;
 
 
     // Lex up the file into lines
@@ -198,15 +198,65 @@ int main(int argc, char **argv) {
         errs() << "Abort due to errors\n";
         return 1;
       }
-        
+
       Reg.BE = new CudaBackEnd(P.getGrid());
-      Reg.BE->setTimeTileSize(TimeTileSize);
-      Reg.BE->setBlockSize(0, BlockSizeX);
-      Reg.BE->setBlockSize(1, BlockSizeY);
-      Reg.BE->setBlockSize(2, BlockSizeZ);
-      Reg.BE->setElements(0, ElementsX);
-      Reg.BE->setElements(1, ElementsY);
-      Reg.BE->setElements(2, ElementsZ);
+            
+      SmallVector<StringRef, 1> Matches;
+      bool                      Match;
+
+      // time_steps attribute
+      Regex TimeStepsRE("time_steps:[A-Za-z0-9_]+");
+      Match               = TimeStepsRE.match(Lines[Reg.FirstLine], &Matches);
+      if (Match) {
+        Reg.TimeStepsExpr = Matches[0].substr(11);
+      } else {
+        Reg.TimeStepsExpr = "TS";
+      }
+
+      // block attribute
+      Regex BlockRE("block:[0-9]+(,[0-9]+)*");
+      Match = BlockRE.match(Lines[Reg.FirstLine], &Matches);
+
+      if (Match) {
+        SmallVector<StringRef,4> Comps;
+        Matches[0].substr(6).split(Comps, ",");
+
+        for (unsigned ii = 0, ee = Comps.size(); ii != ee; ++ii) {
+          Reg.BE->setBlockSize(ii, atoi(Comps[ii].str().c_str()));
+        }
+      } else {
+        Reg.BE->setBlockSize(0, BlockSizeX);
+        Reg.BE->setBlockSize(1, BlockSizeY);
+        Reg.BE->setBlockSize(2, BlockSizeZ);
+      }
+
+      // tile attribute
+      Regex TileRE("tile:[0-9]+(,[0-9]+)*");
+      Match = TileRE.match(Lines[Reg.FirstLine], &Matches);
+
+      if (Match) {
+        SmallVector<StringRef,4> Comps;
+        Matches[0].substr(5).split(Comps, ",");
+
+        for (unsigned ii = 0, ee = Comps.size(); ii != ee; ++ii) {
+          Reg.BE->setElements(ii, atoi(Comps[ii].str().c_str()));
+        }
+      } else {
+        Reg.BE->setElements(0, ElementsX);
+        Reg.BE->setElements(1, ElementsY);
+        Reg.BE->setElements(2, ElementsZ);
+      }
+
+      // time attribute
+      Regex TimeRE("time:[0-9]+(,[0-9]+)*");
+      Match = TimeRE.match(Lines[Reg.FirstLine], &Matches);
+
+      if (Match) {
+        Reg.BE->setTimeTileSize(atoi(Matches[0].substr(5).str().c_str()));
+      } else {
+        Reg.BE->setTimeTileSize(TimeTileSize);
+      }
+
       Reg.BE->setVerbose(Verbose);
       Reg.BE->run();
     }
@@ -219,7 +269,7 @@ int main(int argc, char **argv) {
         i = Reg.LastLine;
         Out->os() << "////// BEGIN OVERTILE CODEGEN\n";
         Out->os() << Reg.BE->getCanonicalPrototype();
-        Out->os() << Reg.BE->getCanonicalInvocation();
+        Out->os() << Reg.BE->getCanonicalInvocation(Reg.TimeStepsExpr);
         Out->os() << "////// END OVERTILE CODEGEN\n";
       } else {
         Out->os() << Lines[i];

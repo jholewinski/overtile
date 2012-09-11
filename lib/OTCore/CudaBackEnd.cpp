@@ -524,7 +524,7 @@ std::string CudaBackEnd::getCanonicalPrototype() {
   return Ret;
 }
 
-std::string CudaBackEnd::getCanonicalInvocation() {
+std::string CudaBackEnd::getCanonicalInvocation(StringRef TimeStepExpr) {
 
     std::string              Ret;
   llvm::raw_string_ostream OS(Ret);
@@ -532,7 +532,7 @@ std::string CudaBackEnd::getCanonicalInvocation() {
   Grid                 *G         = getGrid();
   std::list<Function*>  Functions = G->getFunctionList();
 
-  OS << "ot_program_" << G->getName() << "(TS";
+  OS << "ot_program_" << G->getName() << "(" << TimeStepExpr;
     
   // Generate in/out parameters for each field
   std::list<Field*> Fields = G->getFieldList();

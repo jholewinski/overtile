@@ -16,6 +16,12 @@ BackEnd::BackEnd(Grid *G)
 
   BlockSize = new unsigned[G->getNumDimensions()];
   Elements  = new unsigned[G->getNumDimensions()];
+
+  for (unsigned i = 0, e = G->getNumDimensions(); i != e; ++i) {
+    
+    BlockSize[i] = 8;
+    Elements[i]  = 1;
+  }
   
   const std::list<Field*> &Fields     = G->getFieldList();
   unsigned                 Dimensions = G->getNumDimensions();
@@ -33,6 +39,16 @@ BackEnd::~BackEnd() {
 }
 
 void BackEnd::run() {
+
+  if (getVerbose()) {
+    for (unsigned i = 0, e = TheGrid->getNumDimensions(); i != e; ++i) {
+      llvm::errs() << "Block Size (" << i << "): " << BlockSize[i] << "\n";
+    }
+    for (unsigned i = 0, e = TheGrid->getNumDimensions(); i != e; ++i) {
+      llvm::errs() << "Tile Size (" << i << "): " << Elements[i] << "\n";
+    }
+  }
+  
   generateTiling();
 }
 
