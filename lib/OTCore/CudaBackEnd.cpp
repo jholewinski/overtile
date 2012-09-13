@@ -74,9 +74,10 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
   
   OS << ") {\n";
 
-  unsigned SharedSize = 1;
+  std::string        SharedSizeDecl;
+  raw_string_ostream SharedSizeStr(SharedSizeDecl);
   
-  for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+  for (int i = G->getNumDimensions()-1, e = 0; i >= e; --i) {
     // Find max offsets for all fields.
     unsigned MaxLeft  = 0;
     unsigned MaxRight = 0;
@@ -95,14 +96,15 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
       }
     }
 
-    SharedSize *= (getElements(i)*getBlockSize(i) + MaxLeft + MaxRight);
+    SharedSizeStr << '[' << (getElements(i)*getBlockSize(i) + MaxLeft + MaxRight) << ']';
   }
+  SharedSizeStr.flush();
 
   for (std::list<Field*>::iterator I = Fields.begin(), E  = Fields.end(), B = I;
        I                                                 != E; ++I) {
     Field *F                                              = *I;
     OS << "  __shared__ " << getTypeName(F->getElementType()) << " Shared_" << F->getName()
-       << "[" << SharedSize << "];\n";
+       << SharedSizeDecl << ";\n";
   }
   
   Region          BlockRegion(G->getNumDimensions());
@@ -171,7 +173,7 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
     
     OS << "  int max_left_offset_" << i << " = " << MaxLeft << ";\n";
     OS << "  int max_right_offset_" << i << " = " << MaxRight << ";\n";
-    OS << "  int shared_size_" << i << " = ts_" << i << "*blockDim." << getDimensionIndex(i) << " + " << (MaxLeft + MaxRight) << ";\n";
+    //OS << "  int shared_size_" << i << " = ts_" << i << "*blockDim." << getDimensionIndex(i) << " + " << (MaxLeft + MaxRight) << ";\n";
   }
 
   OS << "int AddrOffset;\n";
@@ -301,7 +303,9 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
         OS << "  int thislocal_" << i << " = local_" << i << " + elem_" << i << "*blockDim." << getDimensionIndex(i) << ";\n";
       }
     }
-    OS << "AddrOffset = ";
+
+    
+    /*OS << "AddrOffset = ";
     DimTerms = 0;
     Dim      = 0;
     for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
@@ -319,7 +323,21 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
       OS << "[elem_" << (G->getNumDimensions()-i-1) << "]";
     }
     OS << ";\n";
+    */
 
+
+    OS << "Shared_" << Out->getName();
+    for (int i = G->getNumDimensions()-1, e = 0; i >= e; --i) {
+      OS << "[thislocal_" << i << "+1]";
+    }
+    OS << " = Buffer_" << Out->getName();
+    for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+      OS << "[elem_" << (G->getNumDimensions()-i-1) << "]";
+    }
+    OS << ";\n";
+
+
+    
     for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
       OS << "  }\n";
     }
@@ -406,7 +424,7 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
     //}
     //OS << ") = temp_" << Out->getName() << ";\n";
   
-    OS << "AddrOffset = ";
+    /*OS << "AddrOffset = ";
     unsigned DimTerms = 0;
     unsigned Dim      = 0;
     for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
@@ -423,7 +441,21 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
     for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
       OS << "[elem_" << (G->getNumDimensions()-i-1) << "]";
     }
+    OS << ";\n";*/
+
+
+    OS << "Shared_" << Out->getName();
+    for (int i = G->getNumDimensions()-1, e = 0; i >= e; --i) {
+      OS << "[thislocal_" << i << "+1]";
+    }
+    OS << " = Buffer_" << Out->getName();
+    for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+      OS << "[elem_" << (G->getNumDimensions()-i-1) << "]";
+    }
     OS << ";\n";
+
+
+    
     OS << "    }\n";
 
     for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
@@ -585,7 +617,7 @@ void CudaBackEnd::codegenHost(llvm::raw_ostream &OS) {
   OS << ") {\n";
 
 
-  // OpenCL Init
+  // Init
   OS << "  cudaError_t Result;\n";
 
   OS << "  int ArraySize = Dim_0";
@@ -593,6 +625,12 @@ void CudaBackEnd::codegenHost(llvm::raw_ostream &OS) {
     OS << "*Dim_" << i;
   }
   OS << ";\n";
+
+  OS << "  cudaEvent_t TotalStartEvent, TotalStopEvent;\n";
+  OS << "  cudaEventCreate(&TotalStartEvent);\n";
+  OS << "  cudaEventCreate(&TotalStopEvent);\n";
+  OS << "  cudaEventRecord(TotalStartEvent, 0);\n";
+
   
   for (std::list<Field*>::iterator I = Fields.begin(), E  = Fields.end();
        I                                                 != E; ++I) {
@@ -696,6 +734,9 @@ void CudaBackEnd::codegenHost(llvm::raw_ostream &OS) {
     OS << "  assert(Result == cudaSuccess);\n";
   }  
 
+  OS << "  cudaEventRecord(TotalStopEvent, 0);\n";
+  OS << "  assert(cudaEventSynchronize(TotalStopEvent) == cudaSuccess);\n";
+
 
   OS << "  double Flops = 0.0;\n";
   OS << "  double Points;\n";
@@ -718,9 +759,20 @@ void CudaBackEnd::codegenHost(llvm::raw_ostream &OS) {
   OS << "  double Elapsed = ElapsedMS / 1000.0;\n";
   OS << "  double GFlops = Flops / Elapsed / 1e9;\n";
   OS << "  std::cerr << \"GFlops: \" << GFlops << \"\\n\";\n";
+  OS << "  std::cerr << \"Elapsed: \" << Elapsed << \"\\n\";\n";
 
+  OS << "  float TotalElapsedMS;\n";
+  OS << "  cudaEventElapsedTime(&TotalElapsedMS, TotalStartEvent, TotalStopEvent);\n";
+  OS << "  double TotalElapsed = TotalElapsedMS / 1000.0;\n";
+  OS << "  double TotalGFlops = Flops / TotalElapsed / 1e9;\n";
+  OS << "  std::cerr << \"Total GFlops: \" << TotalGFlops << \"\\n\";\n";
+  OS << "  std::cerr << \"Total Elapsed: \" << TotalElapsed << \"\\n\";\n";
+  
+  
   OS << "  cudaEventDestroy(StartEvent);\n";
   OS << "  cudaEventDestroy(StopEvent);\n";
+  OS << "  cudaEventDestroy(TotalStartEvent);\n";
+  OS << "  cudaEventDestroy(TotalStopEvent);\n";
 
   for (std::list<Field*>::iterator I = Fields.begin(), E  = Fields.end();
        I                                                 != E; ++I) {
@@ -883,41 +935,54 @@ void CudaBackEnd::codegenFieldRefLoad(FieldRef *Ref, llvm::raw_ostream &OS,
   if (!UseShared) Prefix = "In_";
   else Prefix            = "Shared_";
   
-    
-  OS << "AddrOffset = ";
+
+  if (!UseShared) {
+    OS << "AddrOffset = ";
   
-  unsigned DimTerms = 0;
+    unsigned DimTerms = 0;
   
-  unsigned Dim    = 0;
-  for (std::vector<IntConstant*>::const_iterator I      = Offsets.begin(),
-         E        = Offsets.end(), B = I; I != E; ++I) {
-    int    Offset = (*I)->getValue();
-    if (B != I) OS << " + ";
-    if (!UseShared)
-      OS << "(thisid_" << Dim << "+" << (*I)->getValue() << ")";
-    else
-      OS << "((thislocal_" << Dim << "+" << (*I)->getValue() << ")+max_left_offset_" << Dim << ")";
-    for (unsigned                          i          = 0; i < DimTerms; ++i) {
+    unsigned Dim    = 0;
+    for (std::vector<IntConstant*>::const_iterator I      = Offsets.begin(),
+         E          = Offsets.end(), B = I; I != E; ++I) {
+      int    Offset = (*I)->getValue();
+      if (B != I) OS << " + ";
       if (!UseShared)
-        OS << "*Dim_" << i;
+        OS << "(thisid_" << Dim << "+" << (*I)->getValue() << ")";
       else
-        OS << "*shared_size_" << i << "";
+        OS << "((thislocal_" << Dim << "+" << (*I)->getValue() << ")+max_left_offset_" << Dim << ")";
+      for (unsigned                          i          = 0; i < DimTerms; ++i) {
+        if (!UseShared)
+          OS << "*Dim_" << i;
+        else
+          OS << "*shared_size_" << i << "";
+      }
+      ++DimTerms;
+      ++Dim;
     }
-    ++DimTerms;
-    ++Dim;
-  }
-  OS << ";\n";
-
-  // Min-max shouldn't be needed
-  //if (!UseShared) {
-  //  OS << "AddrOffset = max(AddrOffset, 0);\n";
-  //  OS << "AddrOffset = min(AddrOffset, array_size-1);\n";
-  //}
+    OS << ";\n";
   
-  // @FIXME: Hard-coded float!
-  OS << "float " << VarName << " = *(" << Prefix << Name
-     << " + AddrOffset);\n";
 
+    // Min-max shouldn't be needed
+    //if (!UseShared) {
+    //  OS << "AddrOffset = max(AddrOffset, 0);\n";
+    //  OS << "AddrOffset = min(AddrOffset, array_size-1);\n";
+    //}
+  
+    // @FIXME: Hard-coded float!
+    OS << "float " << VarName << " = *(" << Prefix << Name
+       << " + AddrOffset);\n";
+  } else {
+    // @FIXME: Hard-coded float!
+    OS << "float " << VarName << " = Shared_" << Name;
+    
+    for (int i = Offsets.size()-1, e = 0; i >= e; --i) {
+           
+      int Offset = Offsets[i]->getValue();
+      OS << "[thislocal_" << i << "+1+" << Offset << "]";
+    }
+    OS << ";\n";
+  }
+  
   Idents.insert(VarName);
 }
 
