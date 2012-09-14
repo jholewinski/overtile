@@ -96,7 +96,7 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
       }
     }
 
-    SharedSizeStr << '[' << (getElements(i)*getBlockSize(i) + MaxLeft + MaxRight) << ']';
+    SharedSizeStr << '[' << getElements(i)*getBlockSize(i) << "+" << MaxLeft << "+" << MaxRight << ']';
   }
   SharedSizeStr.flush();
 

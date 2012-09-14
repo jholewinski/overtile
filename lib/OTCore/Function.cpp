@@ -5,6 +5,7 @@
 #include "overtile/Core/Grid.h"
 #include "overtile/Core/Region.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <iostream>
 #include <cassert>
 #include <cstdlib>
@@ -59,8 +60,19 @@ public:
       visitFieldRef(Ref);
     } else if (ConstantExpr *C = dyn_cast<ConstantExpr>(Expr)) {
       // Do nothing
+    } else if (FunctionCall *FC = dyn_cast<FunctionCall>(Expr)) {
+      visitFunctionCall(FC);
     } else {
-      assert(0 && "Unhandled expression type");
+      report_fatal_error("Unhandled expression type");
+    }
+  }
+
+  void visitFunctionCall(FunctionCall *FC) {
+    
+    const std::vector<Expression*> &Exprs = FC->getParameters();
+    
+    for (unsigned i = 0, e = Exprs.size(); i != e; ++i) {
+      visitExpr(Exprs[i]);
     }
   }
 
@@ -132,8 +144,19 @@ public:
       visitFieldRef(Ref);
     } else if (ConstantExpr *C = dyn_cast<ConstantExpr>(Expr)) {
       // Do nothing
+    } else if (FunctionCall *FC = dyn_cast<FunctionCall>(Expr)) {
+      visitFunctionCall(FC);
     } else {
-      assert(0 && "Unhandled expression type");
+      report_fatal_error("Unhandled expression type");
+    }
+  }
+
+  void visitFunctionCall(FunctionCall *FC) {
+    
+    const std::vector<Expression*> &Exprs = FC->getParameters();
+    
+    for (unsigned i = 0, e = Exprs.size(); i != e; ++i) {
+      visitExpr(Exprs[i]);
     }
   }
 
@@ -199,13 +222,24 @@ public:
     } else if (ConstantExpr *C = dyn_cast<ConstantExpr>(Expr)) {
       // Do nothing
     } else if (FunctionCall *FC = dyn_cast<FunctionCall>(Expr)) {
-      // Attribute one flop for function calls
-      Flops = Flops + 1.0;
+      visitFunctionCall(FC);  
     } else {
-      assert(0 && "Unhandled expression type");
+      report_fatal_error("Unhandled expression type");
     }
   }
 
+  void visitFunctionCall(FunctionCall *FC) {
+
+    // For function calls, we count one op plus the parameters
+    const std::vector<Expression*> &Exprs = FC->getParameters();
+
+    Flops = Flops + 1.0;
+        
+    for (unsigned i = 0, e = Exprs.size(); i != e; ++i) {
+      visitExpr(Exprs[i]);
+    }
+  }
+  
   void visitBinaryOp(BinaryOp *Op) {
     visitExpr(Op->getLHS());
     visitExpr(Op->getRHS());

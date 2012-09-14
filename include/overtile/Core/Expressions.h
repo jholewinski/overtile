@@ -135,7 +135,7 @@ public:
   llvm::StringRef getName() const { return Name; }
   const std::vector<Expression*> &getParameters() const { return Exprs; }
 
-  virtual void getFields(std::set<Field*> &Fields) const {}
+  virtual void getFields(std::set<Field*> &Fields) const;
 
   virtual void replacePlaceHolder(llvm::StringRef Name, Expression *Expr);
 

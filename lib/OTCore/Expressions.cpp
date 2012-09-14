@@ -115,12 +115,17 @@ void FunctionCall::replacePlaceHolder(llvm::StringRef Name, Expression *Expr) {
   }
 }
 
+void FunctionCall::getFields(std::set<Field*> &Fields) const {
+  for (unsigned i = 0, e = Exprs.size(); i != e; ++i) {
+    Exprs[i]->getFields(Fields);
+  }
+}
+
 void FunctionCall::getPlaceHolders(std::vector<PlaceHolderExpr*> &PH) const {
   for (unsigned i = 0, e = Exprs.size(); i != e; ++i) {
     Exprs[i]->getPlaceHolders(PH);
   }
 }
-
 
 ConstantExpr::ConstantExpr(unsigned ExKind)
   : Expression(ExKind) {
