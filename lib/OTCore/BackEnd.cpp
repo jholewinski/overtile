@@ -3,6 +3,7 @@
 #include "overtile/Core/Field.h"
 #include "overtile/Core/Function.h"
 #include "overtile/Core/Grid.h"
+#include "llvm/Support/raw_ostream.h"
 #include <set>
 #include <cassert>
 #include <cstdlib>
@@ -54,26 +55,48 @@ void BackEnd::run() {
 
 void BackEnd::generateTiling() {
   if (Verbose) {
-    std::cerr << "Initial Regions:\n";
+    llvm::errs() << "Initial Regions:\n";
     const std::list<Field*> &Fields = TheGrid->getFieldList();
 
     for (std::list<Field*>::const_iterator I = Fields.begin(),
            E = Fields.end(); I != E; ++I) {
       const Field *F = Regions.find(*I)->first;
       Region &R = Regions.find(*I)->second;
-      std::cerr << "Field `" << F->getName() << "': ";
-      R.dump(std::cerr);
-      std::cerr << "\n";
+      llvm::errs() << "Field `" << F->getName() << "': ";
+      R.dump(llvm::errs());
+      llvm::errs() << "\n";
     }
   }
 
-  // Iterate for T-1 time steps
-  for (unsigned i = 0; i < TimeTileSize-1; ++i) {
+  const std::list<Function*> &Functions = TheGrid->getFunctionList();
+  
+  // Generate list of fields in update order
+  std::list<Field*> UpdateOrder;
+  
+  for (std::list<Function*>::const_iterator I = Functions.begin(),
+         E = Functions.end(); I != E; ++I) {
+
+    UpdateOrder.push_back((*I)->getOutput());
+  }
+
+  if (Verbose) {
+    llvm::errs() << "Field update order: <";
+    for (std::list<Field*>::iterator I = UpdateOrder.begin(),
+           B = I, E = UpdateOrder.end(); I != E; ++I) {
+
+      if (I != B) llvm::errs() << ", ";
+      llvm::errs() << (*I)->getName();
+    }
+    llvm::errs() << ">\n";
+  }
+
+  
+  // Iterate for T time steps
+  for (unsigned i = 0; i < TimeTileSize; ++i) {
     unsigned T = TimeTileSize - i - 1;
-    if (Verbose) std::cerr << "Iterating time step " << T << "\n";
+    if (Verbose) llvm::errs() << "Iterating time step " << T << "\n";
 
     // Get list of stencil point functions
-    const std::list<Function*> &Functions = TheGrid->getFunctionList();
     for (std::list<Function*>::const_reverse_iterator I = Functions.rbegin(),
            E = Functions.rend(); I != E; ++I) {
       const Function *F = *I;
@@ -81,26 +104,30 @@ void BackEnd::generateTiling() {
       Region &OutRegion = Regions.find(Out)->second;
       std::set<Field*> Input = F->getInputFields();
 
+      if (Verbose) {
+        llvm::errs() << "Looking at output field " << Out->getName() << "\n";
+      }
+      
       // For each input field, make sure we are producing enough elements
-      for (std::set<Field*>::iterator FI = Input.begin(), FE = Input.end();
-             FI != FE; ++FI) {
-        Region &FRegion = Regions.find(*FI)->second;
-        F->adjustRegion(*FI, FRegion, OutRegion);
+      for (std::set<Field*>::iterator FI = Input.begin(), FE  = Input.end();
+             FI                                              != FE; ++FI) {
+        Region &FRegion                                       = Regions.find(*FI)->second;
+        F->adjustRegion(*FI, FRegion, OutRegion, UpdateOrder, (i == TimeTileSize-1));
       }
     }
   }
 
   if (Verbose) {
-    std::cerr << "Final Regions:\n";
+    llvm::errs() << "Final Regions:\n";
     const std::list<Field*> &Fields = TheGrid->getFieldList();
 
     for (std::list<Field*>::const_iterator I = Fields.begin(),
            E = Fields.end(); I != E; ++I) {
       const Field *F = Regions.find(*I)->first;
       Region &R = Regions.find(*I)->second;
-      std::cerr << "Field `" << F->getName() << "': ";
-      R.dump(std::cerr);
-      std::cerr << "\n";
+      llvm::errs() << "Field `" << F->getName() << "': ";
+      R.dump(llvm::errs());
+      llvm::errs() << "\n";
     }
   }
 }

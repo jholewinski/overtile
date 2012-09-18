@@ -34,7 +34,7 @@ int main() {
 
   double Start = rtclock();
   
-#pragma overtile begin time_steps:TIME_STEPS block:64,8 tile:1,6 time:2
+#pragma overtile begin time_steps:TIME_STEPS block:8,32 tile:4,1 time:4
 
   program fdtd2d is
   grid 2

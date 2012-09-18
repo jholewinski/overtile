@@ -32,7 +32,7 @@ int main() {
 
   double Start = rtclock();
   
-#pragma overtile begin time_steps:TIME_STEPS block:64,8 tile:2,8 time:2
+#pragma overtile begin time_steps:TIME_STEPS block:64,8 tile:1,8 time:9
 
   program j2d is
   grid 2

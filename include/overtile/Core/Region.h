@@ -2,8 +2,8 @@
 #ifndef OVERTILE_CORE_REGION_H
 #define OVERTILE_CORE_REGION_H
 
+#include "llvm/Support/raw_ostream.h"
 #include <vector>
-#include <ostream>
 #include <cassert>
 
 namespace overtile {
@@ -16,7 +16,7 @@ public:
   Region(unsigned D);
   ~Region();
 
-  void dump(std::ostream &OS);
+  void dump(llvm::raw_ostream &OS);
 
   unsigned getNumDimensions() const { return Bounds.size(); }
 

@@ -6,6 +6,7 @@
 #include <vector>
 #include <set>
 #include <string>
+#include <list>
 
 namespace overtile {
 
@@ -35,7 +36,8 @@ public:
 
   /// adjustRegion - Adjusts the Region \p FRegion for Field \p F to include
   /// and points that are needed to evaluate the function in Region \p InRegion.
-  void adjustRegion(Field *F, Region &FRegion, const Region &InRegion) const;
+  void adjustRegion(Field *F, Region &FRegion, const Region &InRegion,
+                    const std::list<Field*> &UpdateOrder, bool LastTS) const;
 
   /// getMaxOffsets - Returns in \p LeftMax and \p RightMax the left-most and
   /// right-most offsets for field \p F that are touched by this function for

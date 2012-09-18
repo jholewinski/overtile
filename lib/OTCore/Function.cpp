@@ -50,8 +50,9 @@ std::set<Field*> Function::getInputFields() const {
 /// FieldRefVisitor - Helper class for adjustRegion.
 class FieldRefVisitor {
 public:
-  FieldRefVisitor(Field *F, Region &FReg, const Region &InReg)
-    : TheField(F), FRegion (FReg), InRegion(InReg) {}
+  FieldRefVisitor(Field *F, Region &FReg, const Region &InReg,
+                  const std::list<Field*> &UO, bool Last, const Function *Fn)
+    : TheField(F), FRegion (FReg), InRegion(InReg), UpdateOrder(UO), LastTS(Last), Func(Fn) {}
 
   void visitExpr(Expression *Expr) {
     if (BinaryOp *Op = dyn_cast<BinaryOp>(Expr)) {
@@ -89,6 +90,37 @@ public:
       return;
     }
 
+    // Only adjust if this is not the first update (in time order)
+    if (LastTS) {
+      // We're in the last time-step, check if there is a write to
+      // this field before us.
+      std::list<Field*>::const_iterator Curr = std::find(UpdateOrder.begin(),
+                                                         UpdateOrder.end(),
+                                                         Func->getOutput());
+      
+      assert(Curr != UpdateOrder.end() && "Field not in update list");
+
+      bool Found = false;
+        
+      for (std::list<Field*>::const_iterator I = UpdateOrder.begin();
+           I     != Curr; ++I) {
+
+        const Field *O  = *I;
+
+        if (O == TheField) {
+          
+          Found = true;
+          break;
+        }
+      }
+
+      if (!Found) {
+        // We are in the last time-step and there is no previous update,
+        // so do not count this field.
+        return;
+      }
+    }
+    
     unsigned                         NumDims = InRegion.getNumDimensions();
     Region                           NewR(NumDims);
     const std::vector<IntConstant*> &Offsets = Ref->getOffsets();
@@ -117,14 +149,18 @@ public:
   }
 
 private:
-  Field        *TheField;
-  Region       &FRegion;
-  const Region &InRegion;
+  Field                   *TheField;
+  Region                  &FRegion;
+  const Region            &InRegion;
+  const std::list<Field*> &UpdateOrder;
+  bool                     LastTS;
+  const Function          *Func;
 };
 
 void Function::
-adjustRegion(Field *F, Region &FRegion, const Region &InRegion) const {
-  FieldRefVisitor V(F, FRegion, InRegion);
+adjustRegion(Field *F, Region &FRegion, const Region &InRegion,
+             const std::list<Field*> &UpdateOrder, bool LastTS) const {
+  FieldRefVisitor V(F, FRegion, InRegion, UpdateOrder, LastTS, this);
   V.visitExpr(Expr);
 }
 

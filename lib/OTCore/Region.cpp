@@ -14,7 +14,7 @@ Region::Region(unsigned Dim) {
 Region::~Region() {
 }
 
-void Region::dump(std::ostream &OS) {
+void Region::dump(llvm::raw_ostream &OS) {
   OS << "<";
   for (unsigned i = 0, e = Bounds.size(); i < e; ++i) {
     BoundsPair &P = Bounds[i];
