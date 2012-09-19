@@ -10,9 +10,10 @@ success = 0
 fail = []
 
 
-test_dir = os.path.dirname(os.path.abspath(__file__))
-build_dir = os.path.join(test_dir, 'build.temp')
-
+test_dir = '@OT_TEST_DIR@'
+build_dir = '@OT_BUILD_DIR@'
+otsc_bin = '@OTSC_BIN@'
+nvcc_bin = '@NVCC_BIN@'
 
 def run_cuda_test(source):
     global runs, success, fail
@@ -22,13 +23,13 @@ def run_cuda_test(source):
     nvcc_out = os.path.join(build_dir, 'nvcc.out')
 
     runs = runs + 1
-    ret = subprocess.call('otsc -c %s -o %s' % (source, otsc_out),
+    ret = subprocess.call('%s -c %s -o %s' % (otsc_bin, source, otsc_out),
                           shell=True)
     if ret != 0:
         fail.append(source)
         return
 
-    ret = subprocess.call('nvcc -Xptxas -v -arch sm_20 -O3 %s -o %s -I%s' % (otsc_out, nvcc_out, os.path.join(test_dir)),
+    ret = subprocess.call('%s -Xptxas -v -arch sm_20 -O3 %s -o %s -I%s' % (nvcc_bin, otsc_out, nvcc_out, os.path.join(test_dir)),
                           shell=True)
     if ret != 0:
         fail.append(source)
