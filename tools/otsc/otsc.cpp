@@ -5,6 +5,7 @@
 
 #include "llvm/ADT/OwningPtr.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -16,6 +17,7 @@
 #include "llvm/Support/ToolOutputFile.h"
 
 using namespace llvm;
+using namespace llvm::sys;
 using namespace overtile;
 
 static cl::opt<std::string>
@@ -62,6 +64,11 @@ Verbose("v", cl::desc("Print verbose output"),
 static cl::opt<bool>
 CXXInput("c", cl::desc("Treat input as CXX with embedded SSP"),
          cl::init(false));
+
+static cl::opt<std::string>
+EmbedTranslate("translator",
+               cl::desc("Use shared library <LIB> as embedded DSL translator"),
+               cl::value_desc("LIB"));
 
 namespace {
 void PrintVersion() {
@@ -134,6 +141,27 @@ int main(int argc, char **argv) {
     bool      StartOfLine = true;
     StringRef Buffer      = CXXSource->getBuffer();
 
+    typedef int (*OTSCTRANSLATEFUNC)(const char*, char**);
+    typedef void (*OTSCFREEFUNC)(char*);
+
+    OTSCTRANSLATEFUNC OTSCTranslate = NULL;
+    OTSCFREEFUNC      OTSCFree      = NULL;
+    
+    if (EmbedTranslate.getNumOccurrences() > 0) {
+      std::string    Err;
+      DynamicLibrary Translator = DynamicLibrary::getPermanentLibrary(EmbedTranslate.c_str(), &Err);
+      if (!Translator.isValid() || Err.size() > 0) {
+        llvm::errs() << Err << "\n";
+        return 1;
+      }
+
+      OTSCTranslate = reinterpret_cast<OTSCTRANSLATEFUNC>(Translator.SearchForAddressOfSymbol("OTSCTranslate"));
+      OTSCFree      = reinterpret_cast<OTSCFREEFUNC>(Translator.SearchForAddressOfSymbol("OTSCFreeString"));
+      if (OTSCTranslate == NULL || OTSCFree == NULL) {
+        llvm::errs() << EmbedTranslate << " does not expose OTSCTranslate and OTSCFreeString\n";
+        return 1;
+      }
+    }
 
     // Lex up the file into lines
     SmallVector<StringRef,64> Lines;
@@ -182,6 +210,21 @@ int main(int argc, char **argv) {
           }
         }
 
+
+        // Run translator if needed
+        if (EmbedTranslate.getNumOccurrences() > 0) {
+          char *ActualSSP;
+          int Res = OTSCTranslate(Reg.SSP.c_str(), &ActualSSP);
+
+          if (Res != 0) {
+            llvm::errs() << "Translator failed!\n";
+            return 1;
+          }
+
+          Reg.SSP = std::string(ActualSSP);
+          OTSCFree(ActualSSP);
+        }
+        
         Regions.push_back(Reg);
       }
     }
