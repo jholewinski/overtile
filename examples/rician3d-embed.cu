@@ -3,11 +3,11 @@
 #include <iostream>
 
 #ifndef PROBLEM_SIZE
-#define PROBLEM_SIZE 300
+#define PROBLEM_SIZE 200
 #endif
 
 #ifndef TIME_STEPS
-#define TIME_STEPS 100
+#define TIME_STEPS 50
 #endif
 
 
@@ -158,8 +158,12 @@ int main() {
   memcpy(RefU, U, sizeof(float)*Dim_0*Dim_1*Dim_2);
   memcpy(RefG, G, sizeof(float)*Dim_0*Dim_1*Dim_2);
 
-  reference(RefU, F, RefG);
 
+  double RefStart = rtclock();
+  
+  //reference(RefU, F, RefG);
+
+  double RefStop = rtclock();
 
   
   cudaThreadSynchronize();
@@ -215,7 +219,7 @@ int main() {
   double Stop = rtclock();
 
   std::cout << "CPU Elapsed: " << (Stop-Start) << "\n";
-
+  std::cout << "Ref Elapsed: " << (RefStop - RefStart) << "\n";
 
 
   std::cout << "Check U...\n";
