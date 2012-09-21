@@ -142,7 +142,7 @@ FP32Constant::FP32Constant(float V)
   SmallVector<char, 32> Str;
   APV.toString(Str);
 
-  std::string Val = std::string(&Str[0]);
+  std::string Val = std::string(&Str[0], Str.size());
   
   if (Val.find('.') == std::string::npos) {
     Val             += ".0";
