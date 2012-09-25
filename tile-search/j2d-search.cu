@@ -3,11 +3,11 @@
 #include <iostream>
 
 #ifndef PROBLEM_SIZE
-#define PROBLEM_SIZE 4000
+#define PROBLEM_SIZE 6000
 #endif
 
 #ifndef TIME_STEPS
-#define TIME_STEPS 100
+#define TIME_STEPS 50
 #endif
 
 

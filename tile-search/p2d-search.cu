@@ -34,17 +34,11 @@ int main() {
   
 #pragma overtile begin time_steps:TIME_STEPS TILE_SIZE_PARAMS
 
-  program g2d is
+  program p2d is
   grid 2
   field A float inout
-
-    A[1:1][1:1] =
     
-    let p0 = (A[0][0] - A[0][1]) * (A[0][0] - A[0][1]) in
-    let p1 = (A[0][0] - A[0][-1]) * (A[0][0] - A[0][-1]) in
-    let p2 = (A[0][0] - A[1][0]) * (A[0][0] - A[1][0]) in
-    let p3 = (A[0][0] - A[-1][0]) * (A[0][0] - A[-1][0]) in
-      A[0][0] + rsqrt(0.00001 + p0 + p1 + p2 + p3)
+    A[1:1][1:1] = 8.0*A[0][0] - (A[0][1] + A[0][-1] + A[-1][-1] + A[1][1] + A[-1][0] + A[1][0] + A[-1][1] + A[1][1])
 
 #pragma overtile end
 
@@ -56,6 +50,7 @@ int main() {
   
   std::cout << "GStencils/sec: " << GStencils << "\n";
 
+  
   delete [] A;
 
   return 0;
