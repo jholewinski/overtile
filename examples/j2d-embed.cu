@@ -32,7 +32,7 @@ int main() {
 
   double Start = rtclock();
   
-#pragma overtile begin time_steps:TIME_STEPS block:64,8 tile:1,8 time:9
+#pragma overtile begin time_steps:TIME_STEPS block:64,8 tile:1,12 time:6
 
   program j2d is
   grid 2
@@ -45,6 +45,10 @@ int main() {
   double Stop = rtclock();
 
   std::cout << "CPU Elapsed: " << (Stop-Start) << "\n";
+
+  double GStencils = (PROBLEM_SIZE-2)*(PROBLEM_SIZE-2)*(double)TIME_STEPS/1e9/(Stop-Start);
+  
+  std::cout << "GStencils/sec: " << GStencils << "\n";
   
   delete [] A;
 

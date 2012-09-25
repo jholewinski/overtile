@@ -19,6 +19,18 @@ if dim == 2:
     ex_range = [1]
     ey_range = range(1, 12+1, 1)
     ez_range = [1]
+elif dim == 3:
+    x_range = range(8, 64+1, 4)
+    y_range = range(1, 8+1, 1)
+    z_range = range(1, 8+1, 1)
+    t_range = range(1, 12+1, 1)
+    #ex_range = range(1, 12+1, 1)
+    ex_range = [1]
+    ey_range = range(1, 12+1, 1)
+    ez_range = range(1, 12+1, 1)
+else:
+    print('Unknown dimensionality!')
+    exit(1)
 
 configs = [[x, y, z, t, ex, ey, ez] for x in x_range for y in y_range for z in z_range for t in t_range for ex in ex_range for ey in ey_range for ez in ez_range]
 

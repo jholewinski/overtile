@@ -7,7 +7,7 @@
 #endif
 
 #ifndef TIME_STEPS
-#define TIME_STEPS 100
+#define TIME_STEPS 50
 #endif
 
 
