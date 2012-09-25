@@ -47,7 +47,7 @@ for c in configs:
 
     # Run otsc
     ret = subprocess.call('otsc -c /tmp/overtile-search.cu -o /tmp/overtile-search.out.cu',
-                          shell=True)
+                          shell=True, stdout=sys.stdout, stderr=sys.stdout)
 
     if ret != 0:
         sys.stdout.write('Run error!\n')
@@ -57,7 +57,7 @@ for c in configs:
 
     # Run nvcc
     ret = subprocess.call('nvcc -O3 -arch %s /tmp/overtile-search.out.cu -o /tmp/overtile-search.x' % arch,
-                          shell=True)
+                          shell=True, stdout=sys.stdout, stderr=sys.stdout)
 
     if ret != 0:
         sys.stdout.write('Run error!\n')
