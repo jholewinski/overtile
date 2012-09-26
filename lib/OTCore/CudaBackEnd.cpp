@@ -718,6 +718,12 @@ void CudaBackEnd::codegenHost(llvm::raw_ostream &OS) {
   }
   OS << ");\n";
 
+  OS << "    cudaError_t Err = cudaGetLastError();\n";
+  OS << "    if(Err != cudaSuccess) {\n";
+  OS << "      std::cerr << \"Kernel launch failure (error: \" << Err << \")\\n\";\n";
+  OS << "      abort();\n";
+  OS << "    }\n";
+  
   for (std::list<Field*>::iterator I = Fields.begin(), E  = Fields.end();
        I                                                 != E; ++I) {
     Field *F                                              = *I;
@@ -740,7 +746,6 @@ void CudaBackEnd::codegenHost(llvm::raw_ostream &OS) {
 
   OS << "  cudaEventRecord(TotalStopEvent, 0);\n";
   OS << "  assert(cudaEventSynchronize(TotalStopEvent) == cudaSuccess);\n";
-
 
   OS << "  double Flops = 0.0;\n";
   OS << "  double Points;\n";
