@@ -11,8 +11,8 @@ src = sys.argv[2]
 arch = sys.argv[3]
 
 if dim == 2:
-    x_range = range(32, 128+1, 32)
-    y_range = range(1, 32+1, 1)
+    x_range = range(32, 96+1, 32)
+    y_range = range(2, 8+1, 2)
     z_range = [1]
     t_range = range(1, 12+1, 1)
     #ex_range = range(1, 12+1, 1)
@@ -20,14 +20,14 @@ if dim == 2:
     ey_range = range(1, 12+1, 1)
     ez_range = [1]
 elif dim == 3:
-    x_range = range(8, 64+1, 4)
-    y_range = range(1, 8+1, 1)
-    z_range = range(1, 8+1, 1)
-    t_range = range(1, 12+1, 1)
+    x_range = range(4, 16+1, 4)
+    y_range = range(2, 8+1, 2)
+    z_range = range(2, 8+1, 2)
+    t_range = range(1, 6+1, 1)
     #ex_range = range(1, 12+1, 1)
     ex_range = [1]
-    ey_range = range(1, 12+1, 1)
-    ez_range = range(1, 12+1, 1)
+    ey_range = range(2, 6+1, 2)
+    ez_range = range(2, 6+1, 2)
 else:
     print('Unknown dimensionality!')
     exit(1)
