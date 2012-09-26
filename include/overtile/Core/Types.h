@@ -12,7 +12,8 @@ namespace overtile {
 class ElementType {
 public:
   enum TypeKind {
-    FP32
+    FP32,
+    FP64
   };
   
   ElementType(unsigned Type);
@@ -61,6 +62,24 @@ public:
     return Ty->getClassType() == ElementType::FP32;
   }
 };
+
+/**
+ * Single-precision floating-point type.
+ */
+class FP64Type : public ScalarType {
+public:
+  FP64Type();
+  virtual ~FP64Type();
+
+  /// getTypeName - Returns a canonical name for the type.
+  virtual std::string getTypeName() const;
+
+  static inline bool classof(const FP64Type*) { return true; }
+  static inline bool classof(const ElementType* Ty) {
+    return Ty->getClassType() == ElementType::FP64;
+  }
+};
+
 
 }
 

@@ -15,7 +15,7 @@ using namespace llvm;
 namespace {
 char getDimensionIndex(unsigned Dim) {
   switch (Dim) {
-  default: llvm_unreachable("Bad dimension number");
+  default: report_fatal_error("Bad dimension number");
   case 0: return 'x';
   case 1: return 'y';
   case 2: return 'z';
@@ -228,8 +228,9 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
     Idents.clear();
     codegenLoads(F->getExpression(), OS, Idents);
 
-    // @FIXME: Hard-coded float
-    OS << "  float Res = ";
+    const ElementType *ETy = F->getOutput()->getElementType();
+    
+    OS << "  " << getTypeName(ETy) << " Res = ";
     codegenExpr(F->getExpression(), OS);
     OS << ";\n";
     
@@ -268,7 +269,9 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
     //OS << "AddrOffset = min(AddrOffset, array_size-1);\n";
   
     // @FIXME: Hard-coded float!
-    OS << "float temp = *(In_" << Out->getName()
+    ETy = F->getOutput()->getElementType();
+
+    OS << getTypeName(ETy) << " temp = *(In_" << Out->getName()
        << " + AddrOffset);\n";
 
     OS << "  Buffer_" << Out->getName();
@@ -376,8 +379,9 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
     Idents.clear();
     codegenLoads(F->getExpression(), OS, Idents);
 
-    // @FIXME: Hard-coded float
-    OS << "  float Res = ";
+    const ElementType *ETy = F->getOutput()->getElementType();
+
+    OS << "  " << getTypeName(ETy) << " Res = ";
     codegenExpr(F->getExpression(), OS);
     OS << ";\n";
 
@@ -788,8 +792,10 @@ void CudaBackEnd::codegenHost(llvm::raw_ostream &OS) {
 std::string CudaBackEnd::getTypeName(const ElementType *Ty) {
   if (const FP32Type *FPTy = dyn_cast<const FP32Type>(Ty)) {
     return "float";
+  } else if (const FP64Type *FPTy = dyn_cast<const FP64Type>(Ty)) {
+    return "double";
   } else {
-    llvm_unreachable("Unknown type");
+    report_fatal_error("Unknown type");
   }
 }
 
@@ -804,7 +810,6 @@ void CudaBackEnd::codegenExpr(Expression *Expr, llvm::raw_ostream &OS) {
     return codegenConstant(C, OS);
   } else {
     report_fatal_error("Unhandled expression in CudaBackEnd::codegenExpr");
-    llvm_unreachable("Unhandled expression");
   }
 }
 
@@ -891,7 +896,7 @@ void CudaBackEnd::codegenLoads(Expression *Expr, llvm::raw_ostream &OS,
       codegenLoads(Exprs[i], OS, Idents);
     }
   } else {
-    llvm_unreachable("Unhandled expr type");
+    report_fatal_error("Unhandled expr type");
   }
 }
 
@@ -904,7 +909,9 @@ void CudaBackEnd::codegenFieldRefLoad(FieldRef *Ref, llvm::raw_ostream &OS,
   
   bool UseShared = true;
   
-  std::string Name = F->getName();
+  std::string        Name   = F->getName();
+  const ElementType *ETy    = F->getElementType();
+  std::string        TyName = getTypeName(ETy);
 
   // Determine canonical variable name for this reference
   std::string              VarName;
@@ -968,12 +975,10 @@ void CudaBackEnd::codegenFieldRefLoad(FieldRef *Ref, llvm::raw_ostream &OS,
     //  OS << "AddrOffset = min(AddrOffset, array_size-1);\n";
     //}
   
-    // @FIXME: Hard-coded float!
-    OS << "float " << VarName << " = *(" << Prefix << Name
+    OS << TyName << " " << VarName << " = *(" << Prefix << Name
        << " + AddrOffset);\n";
   } else {
-    // @FIXME: Hard-coded float!
-    OS << "float " << VarName << " = Shared_" << Name;
+    OS << TyName << " " << VarName << " = Shared_" << Name;
     
     for (int i = Offsets.size()-1, e = 0; i >= e; --i) {
            

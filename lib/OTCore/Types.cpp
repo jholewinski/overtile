@@ -31,4 +31,15 @@ std::string FP32Type::getTypeName() const {
   return "float";
 }
 
+FP64Type::FP64Type()
+  : ScalarType(ElementType::FP64) {
+}
+
+FP64Type::~FP64Type() {
+}
+
+std::string FP64Type::getTypeName() const {
+  return "double";
+}
+
 }

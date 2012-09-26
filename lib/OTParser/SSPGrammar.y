@@ -303,8 +303,7 @@ type
     $$ = new FP32Type();
   }
 | DOUBLE {
-    llvm_unreachable("Double is not supported!");
-    $$ = NULL;
+    $$ = new FP64Type();
   }
 ;
 
