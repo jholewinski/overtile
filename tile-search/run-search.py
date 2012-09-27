@@ -2,6 +2,7 @@
 
 import subprocess
 import sys
+import time
 import yaml
 
 configs = []
@@ -78,9 +79,27 @@ for c in configs:
 
     # Run
     proc = subprocess.Popen('/tmp/overtile-search.x', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    (stdout, stderr) = proc.communicate()
+    
+    start_time = time.time()
+    while proc.poll() == None:
+        time.sleep(0.1)
+        now = time.time()
+        elapsed = now - start_time
+        if elapsed > 15.0:
+            sys.stdout.write('Watchdog timer expired!\n')
+            sys.stdout.flush()
+            proc.terminate()
+            proc.wait()
+            break
+    end_time = time.time()
 
-    stdout = stdout + "\n" + stderr
+    if proc.returncode != 0:
+        sys.stdout.write('Run error!\n')
+        sys.stdout.flush()
+        continue
+
+    stdout = proc.stdout.read()
+    stdout = stdout + "\n" + proc.stderr.read()
 
     try:
         doc = yaml.load(stdout)
