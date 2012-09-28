@@ -69,7 +69,7 @@ for c in configs:
 
 
     # Run nvcc
-    ret = subprocess.call('nvcc -O3 -arch %s /tmp/overtile-search.out.cu -o /tmp/overtile-search.x' % arch,
+    ret = subprocess.call('nvcc -Xptxas -v -O3 -arch %s /tmp/overtile-search.out.cu -o /tmp/overtile-search.x' % arch,
                           shell=True, stdout=sys.stdout, stderr=sys.stdout)
 
     if ret != 0:
