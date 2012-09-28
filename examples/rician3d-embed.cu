@@ -1,4 +1,6 @@
-
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
 #include <sys/time.h>
 #include <iostream>
 
@@ -160,15 +162,21 @@ int main() {
 
 
   double RefStart = rtclock();
-  
-  //reference(RefU, F, RefG);
+
+#ifdef REF_TEST
+  reference(RefU, F, RefG);
+#endif
 
   double RefStop = rtclock();
 
-  
+
+#ifndef REF_TEST
   cudaThreadSynchronize();
+#endif
 
   double Start = rtclock();
+
+#ifndef REF_TEST
   
 #pragma overtile begin time_steps:TIME_STEPS block:16,8,8 tile:1,1,1 time:1
 
@@ -215,6 +223,7 @@ int main() {
     
 #pragma overtile end
 
+#endif
 
   double Stop = rtclock();
 
@@ -222,33 +231,15 @@ int main() {
   std::cout << "Ref Elapsed: " << (RefStop - RefStart) << "\n";
 
 
-  std::cout << "Check U...\n";
-  CompareResult(U, RefU, Dim_0*Dim_1*Dim_2);
+  //std::cout << "Check U...\n";
+  //CompareResult(U, RefU, Dim_0*Dim_1*Dim_2);
 
-
-
-#ifdef PRINT
-  //for (int i = 0; i < PROBLEM_SIZE*PROBLEM_SIZE*PROBLEM_SIZE; ++i) {
-  //  std::cout << "U: " << U[i] << "  -  Ref U: " << RefU[i] << "\n";
-  //}
-
-  for (int i = 1; i < PROBLEM_SIZE-1; ++i) {
-    for (int j = 1; j < PROBLEM_SIZE-1; ++j) {
-      for (int k = 1; k < PROBLEM_SIZE-1; ++k) {
-        std::cout << "U[i][j][k]: " << U[i*PROBLEM_SIZE*PROBLEM_SIZE+j*PROBLEM_SIZE+k] << "  -  RefU[i][j][k]: " << RefU[i*PROBLEM_SIZE*PROBLEM_SIZE+j*PROBLEM_SIZE+k] << "\n";          
-      }
-    }
-  }
-
-
-  for (int i = 0; i < PROBLEM_SIZE; ++i) {
-    for (int j = 0; j < PROBLEM_SIZE; ++j) {
-      for (int k = 0; k < PROBLEM_SIZE; ++k) {
-        std::cout << "G[i][j][k]: " << G[i*PROBLEM_SIZE*PROBLEM_SIZE+j*PROBLEM_SIZE+k] << "  -  RefG[i][j][k]: " << RefG[i*PROBLEM_SIZE*PROBLEM_SIZE+j*PROBLEM_SIZE+k] << "\n";          
-      }
-    }
-  }
-
+#ifdef REF_TEST
+  double GStencils = (Dim_0-2)*(Dim_1-2)*(Dim_2-2)*(double)TIME_STEPS/1e9/(RefStop-RefStart);
+  std::cout << "GStencils/sec: " << GStencils << "\n";
+#else
+  double GStencils = (Dim_0-2)*(Dim_1-2)*(Dim_2-2)*(double)TIME_STEPS/1e9/(Stop-Start);
+  std::cout << "GStencils/sec: " << GStencils << "\n";
 #endif
 
   
