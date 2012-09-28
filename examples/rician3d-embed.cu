@@ -178,7 +178,7 @@ int main() {
 
 #ifndef REF_TEST
   
-#pragma overtile begin time_steps:TIME_STEPS block:16,8,8 tile:1,1,1 time:1
+#pragma overtile begin time_steps:TIME_STEPS block:8,8,8 tile:1,1,1 time:1
 
   program rician3d is
   grid 3

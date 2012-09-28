@@ -27,7 +27,7 @@ bool CompareResult(T *Result, T *Reference, size_t Size) {
   T RefNorm   = 0.0;
 
   for (unsigned i = 0; i < Size; ++i) {
-    float Diff  = Result[i] - Reference[i];
+    double Diff  = Result[i] - Reference[i];
     ErrorNorm  += Diff*Diff;
     RefNorm    += Reference[i]*Reference[i];
   }
@@ -53,51 +53,73 @@ bool CompareResult(T *Result, T *Reference, size_t Size) {
 }
 
 
-void reference(float *u, const float *f, float *g) {
+void reference(double *u, const double *f, double *g) {
 
   int   m, n;
   int   Iter;
-  float r;
+  double r;
   
   const int M = PROBLEM_SIZE;
   const int N = PROBLEM_SIZE;
 
-for k = 1:1:max_iter
-for i=2:1:M-1
-    for j=2:1:N-1
-            c1(i,j)=u(i,j)/sqrt(epi2+(u(i+1,j)-u(i,j))^2+(u(i,j+1)-u(i,j))^2)/V(i,j);
-                end
-                end
-                for i=2:1:M-1
-                    for j=2:1:N-1
-                            c2(i,j)=u(i,j)/sqrt(epi2+(u(i,j)-u(i-1,j))^2+(u(i-1,j+1)-u(i-1,j))^2)/V(i,j);
-                                end
-                                end
-                                for i=2:1:M-1
-                                    for j=2:1:N-1
-                                            c3(i,j)=u(i,j)/sqrt(epi2+(u(i+1,j)-u(i,j))^2+(u(i,j+1)-u(i,j))^2)/V(i,j);
-                                                end
-                                                end
-                                                for i=2:1:M-1
-                                                    for j=2:1:N-1
-                                                            c4(i,j)=u(i,j)/sqrt(epi2+(u(i+1,j-1)-u(i,j-1))^2+(u(i,j)-u(i,j-1))^2)/V(i,j);
-                                                                end
-                                                                end
+  const double DT      = 5.0f;
+  const double EPSILON = 1.0E-20f;
+
+  double sigma  = 1.00001f;
+  double sigma2 = sigma*sigma;
+  double lambda = 1.00001f;
+  double gamma  = lambda/sigma2;
 
 
-                                                                for i=2:1:M-1
-                                                                    for j=2:1:N-1
-                                                                            if u(i,j) < epi2
-                                                                                        u1(i,j) = u(i,j);
-                                                                                                else
-                                                                                                        u1(i,j)=1/(alpha+c1(i,j)+c2(i,j)+c3(i,j)+c4(i,j))*(alpha*f(i,j)+c1(i,j)*u(i+1,j)+c2(i,j)*u(i-1,j)+c3(i,j)*u(i,j+1)+c4(i,j)*u(i,j-1));
-                                                                                                                end
-                                                                                                                    end
-                                                                                                                    end
+  double *Temp = new double[M*N];
 
-
-                                                                                                                  
+  memcpy(Temp, u, sizeof(double)*M*N);
   
+#define SQR(x) ((x)*(x))
+  
+    for(Iter = 1; Iter <= TIME_STEPS; Iter++)
+    {
+        /* Macros for referring to pixel neighbors */
+        #define CENTER   (m+n*M)
+        #define RIGHT    (m+n*M+M)
+        #define LEFT     (m+n*M-M)
+        #define DOWN     (m+n*M+1)
+        #define UP       (m+n*M-1)        
+        
+        /* Approximate g = 1/|grad u| */
+        for(n = 1; n < N-1; n++)
+            for(m = 1; m < M-1; m++)
+                g[CENTER] = 1.0/sqrt( EPSILON
+                   + SQR(u[CENTER] - u[RIGHT])
+                   + SQR(u[CENTER] - u[LEFT])
+                   + SQR(u[CENTER] - u[DOWN])
+                   + SQR(u[CENTER] - u[UP]) );        
+        
+        
+        for(n = 1; n < N-1; n++)
+            for(m = 1; m < M-1; m++)
+            {
+                /* Evaluate r = I1(u*f/sigma^2) / I0(u*f/sigma^2) with
+                 a cubic rational approximation. */
+                r = u[CENTER]*f[CENTER]/sigma2;
+                r = ( r*(2.38944 + r*(0.950037 + r)) )
+                   / ( 4.65314 + r*(2.57541 + r*(1.48937 + r)) );
+                /* Update u */           
+
+                Temp[CENTER] = ( u[CENTER] + DT*(u[RIGHT]*g[RIGHT]
+                   + u[LEFT]*g[LEFT] + u[DOWN]*g[DOWN] + u[UP]*g[UP] 
+                   + gamma*f[CENTER]*r) ) /
+                   (1.0 + DT*(g[RIGHT] + g[LEFT] + g[DOWN] + g[UP] + gamma));
+                
+            }
+
+
+        memcpy(u, Temp, sizeof(double)*M*N);
+        
+    }
+
+
+  delete [] Temp;
 }
 
 
@@ -106,23 +128,23 @@ int main() {
   const int Dim_0 = PROBLEM_SIZE;
   const int Dim_1 = PROBLEM_SIZE;
   
-  float *G = new float[Dim_0*Dim_1];
-  float *U = new float[Dim_0*Dim_1];
-  float *F = new float[Dim_0*Dim_1];
+  double *G = new double[Dim_0*Dim_1];
+  double *U = new double[Dim_0*Dim_1];
+  double *F = new double[Dim_0*Dim_1];
 
   srand(time(NULL));
   
   for (int i = 0; i < Dim_0*Dim_1; ++i) {
     G[i] = 0.0f;
-    F[i] = (float)rand() / (float)(RAND_MAX+1.0f) * 10.0f;
+    F[i] = (double)rand() / (double)(RAND_MAX+1.0f) * 10.0f;
     U[i] = F[i];
   }
   
-  float *RefU = new float[Dim_0*Dim_1];
-  float *RefG = new float[Dim_0*Dim_1];
+  double *RefU = new double[Dim_0*Dim_1];
+  double *RefG = new double[Dim_0*Dim_1];
 
-  memcpy(RefU, U, sizeof(float)*Dim_0*Dim_1);
-  memcpy(RefG, G, sizeof(float)*Dim_0*Dim_1);
+  memcpy(RefU, U, sizeof(double)*Dim_0*Dim_1);
+  memcpy(RefG, G, sizeof(double)*Dim_0*Dim_1);
 
 
   double RefStart = rtclock();
@@ -141,13 +163,13 @@ int main() {
 
 #ifndef REF_TEST
   
-#pragma overtile begin time_steps:TIME_STEPS block:32,8 tile:1,4 time:2
+#pragma overtile begin time_steps:TIME_STEPS block:32,8 tile:1,2 time:1
 
   program rician2d is
   grid 2
-  field G float inout
-  field U float inout
-  field F float in
+  field G double inout
+  field U double inout
+  field F double in
 
   F[0:0][0:0] = F[0][0]
     
