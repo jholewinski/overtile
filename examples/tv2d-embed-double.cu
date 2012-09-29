@@ -27,7 +27,7 @@ bool CompareResult(T *Result, T *Reference, size_t Size) {
   T RefNorm   = 0.0;
 
   for (unsigned i = 0; i < Size; ++i) {
-    float Diff  = Result[i] - Reference[i];
+    double Diff  = Result[i] - Reference[i];
     ErrorNorm  += Diff*Diff;
     RefNorm    += Reference[i]*Reference[i];
   }
@@ -53,19 +53,19 @@ bool CompareResult(T *Result, T *Reference, size_t Size) {
 }
 
 
-void reference(float *u, const float *f, const float *V) {
+void reference(double *u, const double *f, const double *V) {
 
   int   m, n;
   int   Iter;
-  float r;
+  double r;
   
   const int M = PROBLEM_SIZE;
   const int N = PROBLEM_SIZE;
 
-  float *Temp = new float[N*M];
+  double *Temp = new double[N*M];
 
-  const float epi2  = 1e-8f;
-  const float alpha = 1.001;
+  const double epi2  = 1e-8;
+  const double alpha = 1.001;
   
 #define REF(i,j) ((i)*M+(j))
 #define SQR(x)   ((x)*(x))
@@ -74,17 +74,17 @@ void reference(float *u, const float *f, const float *V) {
     for (int i = 1; i < N-1; ++i) {
       for (int j = 1; j < M-1; ++j) {
 
-        float c1 = u[REF(i,j)] / sqrtf(epi2 + SQR(u[REF(i+1,j)]-u[REF(i,j)]) + SQR(u[REF(i,j+1)]-u[REF(i,j)])) / V[REF(i,j)];
-        float c2 = u[REF(i,j)] / sqrtf(epi2 + SQR(u[REF(i,j)]-u[REF(i-1,j)]) + SQR(u[REF(i-1,j+1)]-u[REF(i-1,j)])) / V[REF(i,j)];
-        float c3 = u[REF(i,j)] / sqrtf(epi2 + SQR(u[REF(i+1,j)]-u[REF(i,j)]) + SQR(u[REF(i,j+1)]-u[REF(i,j)])) / V[REF(i,j)];
-        float c4 = u[REF(i,j)] / sqrtf(epi2 + SQR(u[REF(i+1,j-1)]-u[REF(i,j-1)]) + SQR(u[REF(i,j)]-u[REF(i,j-1)])) / V[REF(i,j)];
+        double c1 = u[REF(i,j)] / sqrt(epi2 + SQR(u[REF(i+1,j)]-u[REF(i,j)]) + SQR(u[REF(i,j+1)]-u[REF(i,j)])) / V[REF(i,j)];
+        double c2 = u[REF(i,j)] / sqrt(epi2 + SQR(u[REF(i,j)]-u[REF(i-1,j)]) + SQR(u[REF(i-1,j+1)]-u[REF(i-1,j)])) / V[REF(i,j)];
+        double c3 = u[REF(i,j)] / sqrt(epi2 + SQR(u[REF(i+1,j)]-u[REF(i,j)]) + SQR(u[REF(i,j+1)]-u[REF(i,j)])) / V[REF(i,j)];
+        double c4 = u[REF(i,j)] / sqrt(epi2 + SQR(u[REF(i+1,j-1)]-u[REF(i,j-1)]) + SQR(u[REF(i,j)]-u[REF(i,j-1)])) / V[REF(i,j)];
 
         
-        Temp[REF(i,j)] = 1.0f / (alpha+c1+c2+c3+c4)*(alpha*f[REF(i,j)]+c1*u[REF(i+1,j)]+c2*u[REF(i-1,j)]+c3*u[REF(i,j+1)]+c4*u[REF(i,j-1)]);
+        Temp[REF(i,j)] = 1.0 / (alpha+c1+c2+c3+c4)*(alpha*f[REF(i,j)]+c1*u[REF(i+1,j)]+c2*u[REF(i-1,j)]+c3*u[REF(i,j+1)]+c4*u[REF(i,j-1)]);
       }
     }
 
-    memcpy(u, Temp, sizeof(float)*N*M);
+    memcpy(u, Temp, sizeof(double)*N*M);
   }
 
   delete [] Temp;
@@ -96,25 +96,25 @@ int main() {
   const int Dim_0 = PROBLEM_SIZE;
   const int Dim_1 = PROBLEM_SIZE;
   
-  float *V = new float[Dim_0*Dim_1];
-  float *u = new float[Dim_0*Dim_1];
-  float *f = new float[Dim_0*Dim_1];
+  double *V = new double[Dim_0*Dim_1];
+  double *u = new double[Dim_0*Dim_1];
+  double *f = new double[Dim_0*Dim_1];
 
   srand(time(NULL));
   
   for (int i = 0; i < Dim_0*Dim_1; ++i) {
-    V[i] = (float)rand() / (float)(RAND_MAX+1.0f) * 10.0f;
-    f[i] = (float)rand() / (float)(RAND_MAX+1.0f) * 10.0f;
-    u[i] = (float)rand() / (float)(RAND_MAX+1.0f) * 10.0f;
+    V[i] = (double)rand() / (double)(RAND_MAX+1.0f) * 10.0f;
+    f[i] = (double)rand() / (double)(RAND_MAX+1.0f) * 10.0f;
+    u[i] = (double)rand() / (double)(RAND_MAX+1.0f) * 10.0f;
   }
   
-  float *RefU = new float[Dim_0*Dim_1];
-  float *RefF = new float[Dim_0*Dim_1];
-  float *RefV = new float[Dim_0*Dim_1];
+  double *RefU = new double[Dim_0*Dim_1];
+  double *RefF = new double[Dim_0*Dim_1];
+  double *RefV = new double[Dim_0*Dim_1];
 
-  memcpy(RefU, u, sizeof(float)*Dim_0*Dim_1);
-  memcpy(RefF, f, sizeof(float)*Dim_0*Dim_1);
-  memcpy(RefV, V, sizeof(float)*Dim_0*Dim_1);
+  memcpy(RefU, u, sizeof(double)*Dim_0*Dim_1);
+  memcpy(RefF, f, sizeof(double)*Dim_0*Dim_1);
+  memcpy(RefV, V, sizeof(double)*Dim_0*Dim_1);
 
 
   double RefStart = rtclock();
@@ -135,25 +135,25 @@ int main() {
   
 #pragma overtile begin time_steps:TIME_STEPS block:32,8 tile:1,6 time:1
 
+  
 program tv2d is
 
   grid 2
 
-  field u float inout
-  field V float in
-  field f float in
+  field u double inout
+  field V double in
+  field f double in
 
 
   u[1:1][1:1] = 
   let epi2    = 1e-8 in
   let alpha   = 1.001 in
-  let c1      = u[0][0] / sqrtf(epi2 + SQR(u[1][0]-u[0][0]) + SQR(u[0][1]-u[0][0])) / V[0][0] in
-  let c2      = u[0][0] / sqrtf(epi2 + SQR(u[0][0]-u[-1][0]) + SQR(u[-1][1]-u[-1][0])) / V[0][0] in
-  let c3      = u[0][0] / sqrtf(epi2 + SQR(u[1][0]-u[0][0]) + SQR(u[0][1]-u[0][0])) / V[0][0] in
-  let c4      = u[0][0] / sqrtf(epi2 + SQR(u[1][-1]-u[0][-1]) + SQR(u[0][0]-u[0][-1])) / V[0][0] in
+  let c1      = u[0][0] / sqrt(epi2 + SQR(u[1][0]-u[0][0]) + SQR(u[0][1]-u[0][0])) / V[0][0] in
+  let c2      = u[0][0] / sqrt(epi2 + SQR(u[0][0]-u[-1][0]) + SQR(u[-1][1]-u[-1][0])) / V[0][0] in
+  let c3      = u[0][0] / sqrt(epi2 + SQR(u[1][0]-u[0][0]) + SQR(u[0][1]-u[0][0])) / V[0][0] in
+  let c4      = u[0][0] / sqrt(epi2 + SQR(u[1][-1]-u[0][-1]) + SQR(u[0][0]-u[0][-1])) / V[0][0] in
        
     1.0 / (alpha+c1+c2+c3+c4)*(alpha*f[0][0]+c1*u[1][0]+c2*u[-1][0]+c3*u[0][1]+c4*u[0][-1])
-
     
 #pragma overtile end
 
