@@ -27,7 +27,7 @@ bool CompareResult(T *Result, T *Reference, size_t Size) {
   T RefNorm   = 0.0;
 
   for (unsigned i = 0; i < Size; ++i) {
-    float Diff  = Result[i] - Reference[i];
+    double Diff  = Result[i] - Reference[i];
     ErrorNorm  += Diff*Diff;
     RefNorm    += Reference[i]*Reference[i];
   }
@@ -53,28 +53,28 @@ bool CompareResult(T *Result, T *Reference, size_t Size) {
 }
 
 
-void reference(float *u, const float *f, float *g) {
+void reference(double *u, const double *f, double *g) {
 
   int   p, n, m;
   int   Iter;
-  float r;
+  double r;
   
   const int M = PROBLEM_SIZE;
   const int N = PROBLEM_SIZE;
   const int P = PROBLEM_SIZE;
 
-  const float DT      = 5.0f;
-  const float EPSILON = 1.0E-20f;
+  const double DT      = 5.0f;
+  const double EPSILON = 1.0E-20f;
 
-  float sigma  = 1.00001f;
-  float sigma2 = sigma*sigma;
-  float lambda = 1.00001f;
-  float gamma  = lambda/sigma2;
+  double sigma  = 1.00001f;
+  double sigma2 = sigma*sigma;
+  double lambda = 1.00001f;
+  double gamma  = lambda/sigma2;
 
 
-  float *Temp = new float[M*N*P];
+  double *Temp = new double[M*N*P];
 
-  memcpy(Temp, u, sizeof(float)*M*N*P);
+  memcpy(Temp, u, sizeof(double)*M*N*P);
   
 #define SQR(x) ((x)*(x))
   
@@ -128,7 +128,7 @@ void reference(float *u, const float *f, float *g) {
         }
 
 
-    memcpy(u, Temp, sizeof(float)*M*N*P);
+    memcpy(u, Temp, sizeof(double)*M*N*P);
   }
 
 
@@ -142,23 +142,23 @@ int main() {
   const int Dim_1 = PROBLEM_SIZE;
   const int Dim_2 = PROBLEM_SIZE;
   
-  float *G = new float[Dim_0*Dim_1*Dim_2];
-  float *U = new float[Dim_0*Dim_1*Dim_2];
-  float *F = new float[Dim_0*Dim_1*Dim_2];
+  double *G = new double[Dim_0*Dim_1*Dim_2];
+  double *U = new double[Dim_0*Dim_1*Dim_2];
+  double *F = new double[Dim_0*Dim_1*Dim_2];
 
   srand(time(NULL));
   
   for (int i = 0; i < Dim_0*Dim_1*Dim_2; ++i) {
     G[i] = 0.0f;
-    F[i] = (float)rand() / (float)(RAND_MAX+1.0f) * 10.0f;
+    F[i] = (double)rand() / (double)(RAND_MAX+1.0f) * 10.0f;
     U[i] = F[i];
   }
   
-  float *RefU = new float[Dim_0*Dim_1*Dim_2];
-  float *RefG = new float[Dim_0*Dim_1*Dim_2];
+  double *RefU = new double[Dim_0*Dim_1*Dim_2];
+  double *RefG = new double[Dim_0*Dim_1*Dim_2];
 
-  memcpy(RefU, U, sizeof(float)*Dim_0*Dim_1*Dim_2);
-  memcpy(RefG, G, sizeof(float)*Dim_0*Dim_1*Dim_2);
+  memcpy(RefU, U, sizeof(double)*Dim_0*Dim_1*Dim_2);
+  memcpy(RefG, G, sizeof(double)*Dim_0*Dim_1*Dim_2);
 
 
   double RefStart = rtclock();
@@ -182,10 +182,12 @@ int main() {
 
   program rician3d is
   grid 3
-  field G float inout
-  field U float inout
-  field F float in
+  field G double inout
+  field U double inout
+  field F double in
 
+  F[0:0][0:0][0:0] = F[0][0][0]
+    
   G[1:1][1:1][1:1] = 
     
     let left   = ((U[0][0][0] - U[0][0][-1])*(U[0][0][0] - U[0][0][-1])) in
