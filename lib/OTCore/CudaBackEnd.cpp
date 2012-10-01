@@ -202,7 +202,16 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
     Function *F                                               = *I;
     Field    *Out                                             = F->getOutput();
     const std::vector<std::pair<unsigned, unsigned> > &Bounds = F->getBounds();
-    
+
+    // Begin compute loops
+
+    OS << " if (blockIdx.x == 0 || blockIdx.x == gridDim.x-1";
+    for (unsigned i = 1, e = G->getNumDimensions(); i < e; ++i) {
+      OS << " || blockIdx." << getDimensionIndex(i) << " == 0 || blockIdx." << getDimensionIndex(i) << " == gridDim." << getDimensionIndex(i) << "-1";
+    }
+    OS << " ) {\n";
+
+
     for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
       OS << "  for (unsigned elem_" << i << " = 0; elem_" << i << " < ts_" << i << "; ++elem_" << i << ") {\n";
       if (i != 0) {
@@ -268,7 +277,7 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
     //OS << "AddrOffset = max(AddrOffset, 0);\n";
     //OS << "AddrOffset = min(AddrOffset, array_size-1);\n";
   
-    // @FIXME: Hard-coded float!
+
     ETy = F->getOutput()->getElementType();
 
     OS << getTypeName(ETy) << " temp = *(In_" << Out->getName()
@@ -293,6 +302,48 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
       OS << "  }\n";
     }
 
+    // End Compute Loops
+
+    OS << "  } else {\n";
+
+    // Non-boundary case
+
+    for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+      OS << "  for (unsigned elem_" << i << " = 0; elem_" << i << " < ts_" << i << "; ++elem_" << i << ") {\n";
+      if (i != 0) {
+        OS   << "  int thisid_" << i << " = tid_" << i << " + elem_" << i << ";\n";
+        OS << "  int thislocal_" << i << " = threadIdx." << getDimensionIndex(i) << "*ts_" << i << " + elem_" << i << ";\n";
+      } else {
+        OS << "  int thisid_" << i << " = tid_" << i << " + elem_" << i << "*blockDim." << getDimensionIndex(i) << ";\n";
+        OS << "  int thislocal_" << i << " = local_" << i << " + elem_" << i << "*blockDim." << getDimensionIndex(i) << ";\n";
+      }
+    }
+
+    
+
+    Idents.clear();
+    codegenLoads(F->getExpression(), OS, Idents);
+
+    ETy = F->getOutput()->getElementType();
+    
+    OS << "  " << getTypeName(ETy) << " Res = ";
+    codegenExpr(F->getExpression(), OS);
+    OS << ";\n";
+    
+    OS << "  Buffer_" << Out->getName();
+    for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+      OS << "[elem_" << (G->getNumDimensions()-i-1) << "]";
+    }
+    OS << " = Res;\n";
+    
+    for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+      OS << "  }\n";
+    }
+
+    // End Non-Boundary Case
+
+    OS << "  }\n";
+    
     OS << "  __syncthreads();\n";
 
     

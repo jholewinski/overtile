@@ -27,7 +27,7 @@ elif dim == 3:
     t_range = range(1, 6+1, 1)
     #ex_range = range(1, 12+1, 1)
     ex_range = [1]
-    ey_range = range(1, 6+1, 1)
+    ey_range = range(1, 3+1, 1)
     ez_range = range(1, 3+1, 1)
 else:
     print('Unknown dimensionality!')
