@@ -171,7 +171,7 @@ int main() {
     let c3 = Image[0][0][0] / sqrt(eps + SQR(Image[1][-1][0] - Image[0][-1][0]) + SQR(Image[0][0][0] - Image[0][-1][0]) + SQR(Image[0][-1][1] - Image[0][-1][0])) / SumA[0][0][0] in
     let c4 = Image[0][0][0] / sqrt(eps + SQR(Image[1][0][-1] - Image[0][0][-1]) + SQR(Image[0][1][-1] - Image[0][0][-1]) + SQR(Image[0][0][0] - Image[0][0][-1])) / SumA[0][0][0] in
 
-    (alpha*Image[0][0][0] + c1*(Image[1][0][0] + Image[0][1][0] + Image[0][0][1]) + c2*Image[-1][0][0] + c3*Image[0][-1][0] + c4*Image[0][0][-1])/(alpha + 3.0*c1 + c2 + c3 + c4);
+    (alpha*Image[0][0][0] + c1*(Image[1][0][0] + Image[0][1][0] + Image[0][0][1]) + c2*Image[-1][0][0] + c3*Image[0][-1][0] + c4*Image[0][0][-1])/(alpha + 3.0*c1 + c2 + c3 + c4)
     
 #pragma overtile end
 
