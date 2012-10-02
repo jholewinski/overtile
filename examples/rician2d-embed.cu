@@ -5,11 +5,11 @@
 #include <iostream>
 
 #ifndef PROBLEM_SIZE
-#define PROBLEM_SIZE 4000
+#define PROBLEM_SIZE 6000
 #endif
 
 #ifndef TIME_STEPS
-#define TIME_STEPS 50
+#define TIME_STEPS 100
 #endif
 
 
@@ -171,8 +171,6 @@ int main() {
   field U float inout
   field F float in
 
-  F[0:0][0:0] = F[0][0]
-    
   G[1:1][1:1] = 
     
     let left   = ((U[0][0] - U[0][-1])*(U[0][0] - U[0][-1])) in

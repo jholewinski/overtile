@@ -133,7 +133,7 @@ int main() {
 
 #ifndef REF_TEST
   
-#pragma overtile begin time_steps:TIME_STEPS block:32,8 tile:1,6 time:1
+#pragma overtile begin time_steps:TIME_STEPS block:32,8 tile:1,6 time:4
 
 program tv2d is
 

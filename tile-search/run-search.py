@@ -21,10 +21,10 @@ if dim == 2:
     ey_range = range(1, 12+1, 1)
     ez_range = [1]
 elif dim == 3:
-    x_range = range(4, 16+1, 4)
-    y_range = range(2, 8+1, 2)
-    z_range = range(2, 8+1, 2)
-    t_range = range(1, 6+1, 1)
+    x_range = range(8, 16+1, 4)
+    y_range = range(4, 8+1, 2)
+    z_range = range(4, 8+1, 2)
+    t_range = range(1, 3+1, 1)
     #ex_range = range(1, 12+1, 1)
     ex_range = [1]
     ey_range = range(1, 3+1, 1)
