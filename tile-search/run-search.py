@@ -85,7 +85,7 @@ for c in configs:
         time.sleep(0.1)
         now = time.time()
         elapsed = now - start_time
-        if elapsed > 15.0:
+        if elapsed > 30.0:
             sys.stdout.write('Watchdog timer expired!\n')
             sys.stdout.flush()
             proc.terminate()
