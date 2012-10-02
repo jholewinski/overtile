@@ -48,10 +48,10 @@ program tv2d is
   u[1:1][1:1] = 
   let epi2    = 1e-8 in
   let alpha   = 1.001 in
-  let c1      = u[0][0] / sqrtf(epi2 + SQR(u[1][0]-u[0][0]) + SQR(u[0][1]-u[0][0])) / V[0][0] in
-  let c2      = u[0][0] / sqrtf(epi2 + SQR(u[0][0]-u[-1][0]) + SQR(u[-1][1]-u[-1][0])) / V[0][0] in
-  let c3      = u[0][0] / sqrtf(epi2 + SQR(u[1][0]-u[0][0]) + SQR(u[0][1]-u[0][0])) / V[0][0] in
-  let c4      = u[0][0] / sqrtf(epi2 + SQR(u[1][-1]-u[0][-1]) + SQR(u[0][0]-u[0][-1])) / V[0][0] in
+  let c1      = u[0][0] * rsqrtf(epi2 + SQR(u[1][0]-u[0][0]) + SQR(u[0][1]-u[0][0])) / V[0][0] in
+  let c2      = u[0][0] * rsqrtf(epi2 + SQR(u[0][0]-u[-1][0]) + SQR(u[-1][1]-u[-1][0])) / V[0][0] in
+  let c3      = u[0][0] * rsqrtf(epi2 + SQR(u[1][0]-u[0][0]) + SQR(u[0][1]-u[0][0])) / V[0][0] in
+  let c4      = u[0][0] * rsqrtf(epi2 + SQR(u[1][-1]-u[0][-1]) + SQR(u[0][0]-u[0][-1])) / V[0][0] in
        
     1.0 / (alpha+c1+c2+c3+c4)*(alpha*f[0][0]+c1*u[1][0]+c2*u[-1][0]+c3*u[0][1]+c4*u[0][-1])
 
