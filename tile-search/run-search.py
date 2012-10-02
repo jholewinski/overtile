@@ -12,10 +12,10 @@ src = sys.argv[2]
 arch = sys.argv[3]
 
 if dim == 2:
-    x_range = range(32, 96+1, 32)
-    y_range = range(2, 8+1, 2)
+    x_range = range(32, 64+1, 32)
+    y_range = range(4, 8+1, 2)
     z_range = [1]
-    t_range = range(1, 12+1, 1)
+    t_range = range(1, 6+1, 1)
     #ex_range = range(1, 12+1, 1)
     ex_range = [1]
     ey_range = range(1, 12+1, 1)
