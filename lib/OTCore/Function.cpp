@@ -6,6 +6,7 @@
 #include "overtile/Core/Region.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 #include <iostream>
 #include <cassert>
 #include <cstdlib>
@@ -125,11 +126,28 @@ public:
     Region                           NewR(NumDims);
     const std::vector<IntConstant*> &Offsets = Ref->getOffsets();
 
+#if 0
+    llvm::errs() << "Visiting " << Ref->getField()->getName() << "[";
+    for (unsigned i = 0, e = Offsets.size(); i != e; ++i) {
+      if (i != 0) llvm::errs() << "][";
+      llvm::errs() << Offsets[i]->getValue();
+    }
+    llvm::errs() << "]\n";
+    
+    llvm::errs() << "FRegion In: ";
+    FRegion.dump(llvm::errs());
+    llvm::errs() << "\n";
+
+    llvm::errs() << "InRegion In: ";
+    InRegion.dump(llvm::errs());
+    llvm::errs() << "\n";
+#endif
+    
     for (unsigned i = 0; i < NumDims; ++i) {
       std::pair<int, unsigned> InBound = InRegion.getBound(i);
       std::pair<int, unsigned> FBound  = FRegion.getBound(i);
       int                      Off     = Offsets[i]->getValue();
-      
+
       if (InBound.first + Off < FBound.first) {
         // We need more elements on the lower bound
         int Diff       = FBound.first - (InBound.first + Off);
@@ -144,6 +162,12 @@ public:
         FBound.second += Diff;
       }
 
+#if 0
+      llvm::errs() << "FRegion Out: ";
+      FRegion.dump(llvm::errs());
+      llvm::errs() << "\n";
+#endif
+    
       FRegion.reset(i, FBound);
     }
   }
@@ -158,7 +182,7 @@ private:
 };
 
 void Function::
-adjustRegion(Field *F, Region &FRegion, const Region &InRegion,
+adjustRegion(Field                   *F, Region &FRegion, const Region &InRegion,
              const std::list<Field*> &UpdateOrder, bool LastTS) const {
   FieldRefVisitor V(F, FRegion, InRegion, UpdateOrder, LastTS, this);
   V.visitExpr(Expr);

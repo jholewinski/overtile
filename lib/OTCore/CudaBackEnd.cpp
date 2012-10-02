@@ -1025,11 +1025,11 @@ void CudaBackEnd::codegenFieldRefLoad(FieldRef *Ref, llvm::raw_ostream &OS,
     OS << ";\n";
   
 
-    // Min-max shouldn't be needed
-    //if (!UseShared) {
-    //  OS << "AddrOffset = max(AddrOffset, 0);\n";
-    //  OS << "AddrOffset = min(AddrOffset, array_size-1);\n";
-    //}
+    // Use min-max to handle boundary cases in phase 3
+    if (!InTS0) {
+      OS << "AddrOffset = max(AddrOffset, 0);\n";
+      OS << "AddrOffset = min(AddrOffset, array_size-1);\n";
+    }
   
     OS << TyName << " " << VarName << " = *(" << Prefix << Name
        << " + AddrOffset);\n";

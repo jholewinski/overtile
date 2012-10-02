@@ -1,6 +1,6 @@
 
 #include "overtile/Core/Region.h"
-
+#include "llvm/Support/raw_ostream.h"
 
 namespace overtile {
 
@@ -14,10 +14,10 @@ Region::Region(unsigned Dim) {
 Region::~Region() {
 }
 
-void Region::dump(llvm::raw_ostream &OS) {
+void Region::dump(llvm::raw_ostream &OS) const {
   OS << "<";
   for (unsigned i = 0, e = Bounds.size(); i < e; ++i) {
-    BoundsPair &P = Bounds[i];
+    const BoundsPair &P = Bounds[i];
     OS << "[" << P.first << ", " << P.second << "]";
     if (i < e-1) OS << ", ";
   }
@@ -26,7 +26,7 @@ void Region::dump(llvm::raw_ostream &OS) {
 
 Region Region::makeUnion(const Region &A, const Region &B) {
   Region Ret(A.getNumDimensions());
-  
+
   for (unsigned i = 0, e = A.getNumDimensions(); i < e; ++i) {
     std::pair<int, unsigned> NewBounds;
     std::pair<int, unsigned> ABound, BBound;

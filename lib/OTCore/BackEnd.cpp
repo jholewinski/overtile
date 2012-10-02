@@ -112,7 +112,8 @@ void BackEnd::generateTiling() {
       for (std::set<Field*>::iterator FI = Input.begin(), FE  = Input.end();
              FI                                              != FE; ++FI) {
         Region &FRegion                                       = Regions.find(*FI)->second;
-        F->adjustRegion(*FI, FRegion, OutRegion, UpdateOrder, (i == TimeTileSize-1));
+        Region  OriginalOut(OutRegion);
+        F->adjustRegion(*FI, FRegion, OriginalOut, UpdateOrder, (i == TimeTileSize-1));
       }
     }
   }

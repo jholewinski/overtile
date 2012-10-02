@@ -14,9 +14,12 @@ namespace overtile {
 class Region {
 public:
   Region(unsigned D);
+  Region(const Region& R) {
+    Bounds = R.Bounds;
+  }
   ~Region();
 
-  void dump(llvm::raw_ostream &OS);
+  void dump(llvm::raw_ostream &OS) const;
 
   unsigned getNumDimensions() const { return Bounds.size(); }
 

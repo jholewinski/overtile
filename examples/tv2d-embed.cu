@@ -5,11 +5,11 @@
 #include <iostream>
 
 #ifndef PROBLEM_SIZE
-#define PROBLEM_SIZE 4000
+#define PROBLEM_SIZE 6000
 #endif
 
 #ifndef TIME_STEPS
-#define TIME_STEPS 50
+#define TIME_STEPS 100
 #endif
 
 
@@ -142,7 +142,6 @@ program tv2d is
   field u float inout
   field V float in
   field f float in
-
 
   u[1:1][1:1] = 
   let epi2    = 1e-8 in

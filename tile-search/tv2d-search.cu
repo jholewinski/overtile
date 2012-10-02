@@ -34,7 +34,7 @@ int main() {
 
   double Start = rtclock();
 
-#pragma overtile begin time_steps:TIME_STEPS block:32,8 tile:1,6 time:1
+#pragma overtile begin time_steps:TIME_STEPS TILE_SIZE_PARAMS
 
 program tv2d is
 
