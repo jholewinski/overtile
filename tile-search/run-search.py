@@ -35,16 +35,18 @@ else:
 
 configs = [[x, y, z, t, ex, ey, ez] for x in x_range for y in y_range for z in z_range for t in t_range for ex in ex_range for ey in ey_range for ez in ez_range]
 
-print('Num Configs: %d' % len(configs))
+sys.stderr.write('Num Configs: %d\n' % len(configs))
+sys.stderr.flush()
 
 curr = 1
 
-sys.stderr.write('x,y,z,t,ex,ey,ez,gstencils,cpu_elapsed,compute_elapsed,\n')
-sys.stderr.flush()
+sys.stdout.write('x,y,z,t,ex,ey,ez,gstencils,cpu_elapsed,compute_elapsed,\n')
+sys.stdout.flush()
 
 for c in configs:
     (x, y, z, t, ex, ey, ez) = c
-    print('Running %s (%d of %d)' % (str(c), curr, len(configs)))
+    sys.stderr.write('Running %s (%d of %d)\n' % (str(c), curr, len(configs)))
+    sys.stderr.flush()
     curr = curr + 1
 
     attrs = 'block:%d,%d,%d time:%d tile:%d,%d,%d' % (x, y, z, t, ex, ey, ez)
@@ -60,17 +62,17 @@ for c in configs:
 
     # Run otsc
     ret = subprocess.call('otsc -c /tmp/overtile-search.cu -o /tmp/overtile-search.out.cu',
-                          shell=True, stdout=sys.stdout, stderr=sys.stdout)
+                          shell=True, stdout=sys.stderr, stderr=sys.stderr)
 
     if ret != 0:
-        sys.stdout.write('Run error!\n')
-        sys.stdout.flush()
+        sys.stderr.write('Run error!\n')
+        sys.stderr.flush()
         continue
 
 
     # Run nvcc
     ret = subprocess.call('nvcc -Xptxas -v -O3 -arch %s /tmp/overtile-search.out.cu -o /tmp/overtile-search.x' % arch,
-                          shell=True, stdout=sys.stdout, stderr=sys.stdout)
+                          shell=True, stdout=sys.stderr, stderr=sys.stderr)
 
     if ret != 0:
         sys.stdout.write('Run error!\n')
@@ -86,16 +88,16 @@ for c in configs:
         now = time.time()
         elapsed = now - start_time
         if elapsed > 30.0:
-            sys.stdout.write('Watchdog timer expired!\n')
-            sys.stdout.flush()
+            sys.stderr.write('Watchdog timer expired!\n')
+            sys.stderr.flush()
             proc.terminate()
             proc.wait()
             break
     end_time = time.time()
 
     if proc.returncode != 0:
-        sys.stdout.write('Run error!\n')
-        sys.stdout.flush()
+        sys.stderr.write('Run error!\n')
+        sys.stderr.flush()
         continue
 
     stdout = proc.stdout.read()
@@ -107,10 +109,11 @@ for c in configs:
         cpu_elapsed = float(doc['CPU Elapsed'])
         elapsed = float(doc['Elapsed'])
 
-        sys.stderr.write('%d,%d,%d,%d,%d,%d,%d,%f,%f,%f,\n' % (x, y, z, t, ex, ey, ez, gstencils, cpu_elapsed, elapsed))
-        sys.stderr.flush()
+        sys.stdout.write('%d,%d,%d,%d,%d,%d,%d,%f,%f,%f,\n' % (x, y, z, t, ex, ey, ez, gstencils, cpu_elapsed, elapsed))
+        sys.stdout.flush()
     except:
-        sys.stdout.write('Run error!\n')
+        sys.stderr.write('Run error!\n')
 
     sys.stdout.flush()
+    sys.stderr.flush()
 
