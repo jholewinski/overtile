@@ -76,11 +76,13 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
 
   std::string        SharedSizeDecl;
   raw_string_ostream SharedSizeStr(SharedSizeDecl);
+
+  SharedMaxLeft.resize(G->getNumDimensions(), 0);
   
   for (int i = G->getNumDimensions()-1, e = 0; i >= e; --i) {
     // Find max offsets for all fields.
-    unsigned MaxLeft  = 0;
-    unsigned MaxRight = 0;
+    unsigned MaxLeft                      = 0;
+    unsigned MaxRight                     = 0;
     
     for (std::list<Field*>::iterator I = Fields.begin(), E  = Fields.end();
          I                                                 != E; ++I) {
@@ -95,6 +97,8 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
         MaxRight                                            = std::max(MaxRight, RightOffset);
       }
     }
+
+    SharedMaxLeft[i] = MaxLeft;
 
     SharedSizeStr << '[' << getElements(i)*getBlockSize(i) << "+" << MaxLeft << "+" << MaxRight << ']';
   }
@@ -382,7 +386,7 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
 
     OS << "Shared_" << Out->getName();
     for (int i = G->getNumDimensions()-1, e = 0; i >= e; --i) {
-      OS << "[thislocal_" << i << "+1]";
+      OS << "[thislocal_" << i << "+" << SharedMaxLeft[i] << "]";
     }
     OS << " = Buffer_" << Out->getName();
     for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
@@ -501,7 +505,7 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
 
     OS << "Shared_" << Out->getName();
     for (int i = G->getNumDimensions()-1, e = 0; i >= e; --i) {
-      OS << "[thislocal_" << i << "+1]";
+      OS << "[thislocal_" << i << "+" << SharedMaxLeft[i] << "]";
     }
     OS << " = Buffer_" << Out->getName();
     for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
@@ -1039,7 +1043,8 @@ void CudaBackEnd::codegenFieldRefLoad(FieldRef *Ref, llvm::raw_ostream &OS,
     for (int i = Offsets.size()-1, e = 0; i >= e; --i) {
            
       int Offset = Offsets[i]->getValue();
-      OS << "[thislocal_" << i << "+1+" << Offset << "]";
+
+      OS << "[thislocal_" << i << "+" << SharedMaxLeft[i] << "+" << Offset << "]";
     }
     OS << ";\n";
   }

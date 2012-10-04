@@ -4,6 +4,7 @@
 
 #include "overtile/Core/BackEnd.h"
 #include <set>
+#include <vector>
 
 namespace overtile {
 
@@ -34,6 +35,7 @@ private:
 
   bool                  InTS0;
   std::set<std::string> WrittenFields;
+  std::vector<unsigned> SharedMaxLeft;
   
   static std::string getTypeName(const ElementType *Ty);
 
