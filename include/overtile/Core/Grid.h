@@ -8,6 +8,7 @@
 
 namespace overtile {
 
+class ElementType;
 class Field;
 class Function;
 
@@ -39,12 +40,22 @@ public:
   
   const std::list<Function*> &getFunctionList() const { return Functions; }
 
+  const std::list<std::pair<std::string, const ElementType*> >
+  &getParameters() const {
+    return Params;
+  }
+  
   Field *getFieldByName(llvm::StringRef Name);
+
+  void addParameter(llvm::StringRef Name, const ElementType* Ty);
+  bool doesParameterExist(llvm::StringRef Name);
   
 private:
 
-  typedef std::list<Field*>    FieldList;
-  typedef std::list<Function*> FunctionList;
+  typedef std::list<Field*>                          FieldList;
+  typedef std::list<Function*>                       FunctionList;
+  typedef std::pair<std::string, const ElementType*> ParamDef;
+  typedef std::list<ParamDef>                        ParamList;
   
   /// Number of dimensions in the space
   unsigned     Dimensions;
@@ -52,6 +63,8 @@ private:
   FieldList    Fields;
   /// Functions assigned to this grid.
   FunctionList Functions;
+  /// Parameters defined on this grid.
+  ParamList    Params;
   /// Name of the grid (program)
   std::string  Name;
 };

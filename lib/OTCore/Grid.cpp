@@ -40,4 +40,23 @@ Field *Grid::getFieldByName(llvm::StringRef Name) {
   return NULL;
 }
 
+bool Grid::doesParameterExist(llvm::StringRef Name) {
+  for (ParamList::iterator I = Params.begin(), E = Params.end(); I != E; ++I) {
+    ParamDef &P = *I;
+    if (P.first.compare(Name.data()) == 0) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+void Grid::addParameter(llvm::StringRef Name, const ElementType *Ty) {
+  assert(!doesParameterExist(Name) && "Parameter already exists");
+  ParamDef P;
+  P.first  = Name;
+  P.second = Ty;
+  Params.push_back(P);
+}
+
 }

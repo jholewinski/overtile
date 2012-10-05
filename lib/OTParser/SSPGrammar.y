@@ -48,6 +48,7 @@ void SSPerror(SSPParser*, const char*);
 %token IS
 %token LET
 %token OUT
+%token PARAM
 %token PROGRAM
 %token<Ident> IDENT
 %token<IntConst> INTCONST
@@ -77,7 +78,7 @@ void SSPerror(SSPParser*, const char*);
 %%
 
 top_level
-: PROGRAM IDENT IS grid_def field_list application_list {
+: PROGRAM IDENT IS grid_def param_list field_list application_list {
     Parser->getGrid()->setName(*$2);
   }
 ;
@@ -88,6 +89,26 @@ grid_def
     Parser->setGrid(G);
   }
 ;
+
+param_list
+: /* empty */
+| param_def param_list
+;
+
+param_def
+: PARAM IDENT type {
+    Grid *G = Parser->getGrid();
+    if (G->doesParameterExist(*$2)) {
+      std::string        Msg;
+      raw_string_ostream MsgStr(Msg);
+      MsgStr << "Parameter '" << (*$2) << "' has already been defined";
+      MsgStr.flush();
+      yyerror(Parser, Msg.c_str());
+      YYERROR;
+    }
+
+    G->addParameter(*$2, $3);
+  }
 
 field_list
 : /* empty */
@@ -136,17 +157,17 @@ application_def
     std::vector<PlaceHolderExpr*> PHExpr;
     E->getPlaceHolders(PHExpr);
 
-    for (unsigned i = 0, e = PHExpr.size(); i != e; ++i) {
-      std::string        Msg;
-      raw_string_ostream MsgStr(Msg);
-      MsgStr << "Unknown reference: '" << PHExpr[i]->getName() << "'";
-      MsgStr.flush();
-      yyerror(Parser, Msg.c_str());
-    }
-
-    if (PHExpr.size() > 0) {
-      YYERROR;
-    }
+    // Place-holders are now parameters
+    //for (unsigned i = 0, e = PHExpr.size(); i != e; ++i) {
+    //  std::string        Msg;
+    //  raw_string_ostream MsgStr(Msg);
+    //  MsgStr << "Unknown reference: '" << PHExpr[i]->getName() << "'";
+    //  MsgStr.flush();
+    //  yyerror(Parser, Msg.c_str());
+    //}
+    //if (PHExpr.size() > 0) {
+    //  YYERROR;
+    //}
 
     std::vector<std::pair<unsigned, unsigned> > *Bounds = $2;
     for (unsigned i = 0, e = Bounds->size(); i < e; ++i) {

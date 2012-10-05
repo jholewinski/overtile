@@ -64,6 +64,8 @@ public:
       // Do nothing
     } else if (FunctionCall *FC = dyn_cast<FunctionCall>(Expr)) {
       visitFunctionCall(FC);
+    } else if (PlaceHolderExpr *PH = dyn_cast<PlaceHolderExpr>(Expr)) {
+      // Do nothing
     } else {
       report_fatal_error("Unhandled expression type");
     }
@@ -206,6 +208,8 @@ public:
       // Do nothing
     } else if (FunctionCall *FC = dyn_cast<FunctionCall>(Expr)) {
       visitFunctionCall(FC);
+    } else if (PlaceHolderExpr *PH = dyn_cast<PlaceHolderExpr>(Expr)) {
+      // Do nothing
     } else {
       report_fatal_error("Unhandled expression type");
     }
@@ -283,6 +287,8 @@ public:
       // Do nothing
     } else if (FunctionCall *FC = dyn_cast<FunctionCall>(Expr)) {
       visitFunctionCall(FC);  
+    } else if (PlaceHolderExpr *PH = dyn_cast<PlaceHolderExpr>(Expr)) {
+      // Do nothing
     } else {
       report_fatal_error("Unhandled expression type");
     }

@@ -120,6 +120,8 @@ int SSPParser::getNextToken(void *Val) {
       return LET;
     } else if (Str->compare("out")      == 0) {
       return OUT;
+    } else if (Str->compare("param")  == 0) {
+      return PARAM;
     } else if (Str->compare("program")  == 0) {
       return PROGRAM;
     }

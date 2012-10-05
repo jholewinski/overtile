@@ -71,7 +71,15 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
   for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
     OS << ", int Dim_" << i;
   }
-  
+
+  typedef std::list<std::pair<std::string, const ElementType*> > ParamList;
+  const ParamList Params = G->getParameters();
+
+  for (ParamList::const_iterator I = Params.begin(), E = Params.end(); I != E;
+       ++I) {
+    OS << ", " << getTypeName(I->second) << " " << I->first;
+  }
+
   OS << ") {\n";
 
   std::string        SharedSizeDecl;
@@ -609,6 +617,14 @@ std::string CudaBackEnd::getCanonicalPrototype() {
     OS << ", int Dim_" << i;
   }
 
+  typedef std::list<std::pair<std::string, const ElementType*> > ParamList;
+  const ParamList Params = G->getParameters();
+
+  for (ParamList::const_iterator I = Params.begin(), E = Params.end(); I != E;
+       ++I) {
+    OS << ", " << getTypeName(I->second) << " " << I->first;
+  }
+
   OS << ");\n";
 
   OS.flush();
@@ -636,6 +652,14 @@ std::string CudaBackEnd::getCanonicalInvocation(StringRef TimeStepExpr) {
   }
   for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
     OS << ", Dim_" << i;
+  }
+
+  typedef std::list<std::pair<std::string, const ElementType*> > ParamList;
+  const ParamList Params = G->getParameters();
+
+  for (ParamList::const_iterator I = Params.begin(), E = Params.end(); I != E;
+       ++I) {
+    OS << ", " << I->first;
   }
 
   OS << ");\n";
@@ -671,6 +695,14 @@ void CudaBackEnd::codegenHost(llvm::raw_ostream &OS) {
   }
   for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
     OS << ", int Dim_" << i;
+  }
+
+  typedef std::list<std::pair<std::string, const ElementType*> > ParamList;
+  const ParamList Params = G->getParameters();
+
+  for (ParamList::const_iterator I = Params.begin(), E = Params.end(); I != E;
+       ++I) {
+    OS << ", " << getTypeName(I->second) << " " << I->first;
   }
 
   OS << ") {\n";
@@ -771,6 +803,11 @@ void CudaBackEnd::codegenHost(llvm::raw_ostream &OS) {
     if (i > 0) OS << ", ";
     OS << "Dim_" << i;
   }
+  for (ParamList::const_iterator I = Params.begin(), E = Params.end(); I != E;
+       ++I) {
+    OS << ", " << I->first;
+  }
+
   OS << ");\n";
 
   OS << "    cudaError_t Err = cudaGetLastError();\n";
@@ -868,6 +905,8 @@ void CudaBackEnd::codegenExpr(Expression *Expr, llvm::raw_ostream &OS) {
     return codegenFunctionCall(FC, OS);
   } else if (ConstantExpr *C = dyn_cast<ConstantExpr>(Expr)) {
     return codegenConstant(C, OS);
+  } else if (PlaceHolderExpr *PH = dyn_cast<PlaceHolderExpr>(Expr)) {
+    OS << PH->getName();
   } else {
     report_fatal_error("Unhandled expression in CudaBackEnd::codegenExpr");
   }
@@ -955,6 +994,8 @@ void CudaBackEnd::codegenLoads(Expression *Expr, llvm::raw_ostream &OS,
     for (unsigned i = 0, e = Exprs.size(); i != e; ++i) {
       codegenLoads(Exprs[i], OS, Idents);
     }
+  } else if (PlaceHolderExpr *PH = dyn_cast<PlaceHolderExpr>(Expr)) {
+    /* Do nothing */
   } else {
     report_fatal_error("Unhandled expr type");
   }
