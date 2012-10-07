@@ -213,7 +213,6 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
          E                                                    = Functions.end(); I != E; ++I) {
     Function *F                                               = *I;
     Field    *Out                                             = F->getOutput();
-    const std::vector<std::pair<unsigned, unsigned> > &Bounds = F->getBounds();
 
     // Begin compute loops
 
@@ -235,33 +234,52 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
       }
     }
 
-    
-    OS << "  if (";
-    for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
-      if (i != 0) OS << " && ";
-      OS << "(thisid_" << i << " >= " << Bounds[i].first << " && thisid_" << i
-         << " < Dim_" << i << " - " << Bounds[i].second << ")";
+
+    const std::list<BoundedFunction> &BFuncs = F->getBoundedFunctions();
+    for (std::list<BoundedFunction>::const_iterator I = BFuncs.begin(), E = BFuncs.end(), B = I; I != E; ++I) {
+
+      BoundedFunction BF = *I;
+
+      if (I == B)
+        OS << "  if (";
+      else
+        OS << "  } else if (";
+
+      for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+        FunctionBound Bound = BF.Bounds[i];
+
+        if (i != 0) OS << " && ";
+        
+        // Lower bound
+        OS << "(thisid_" << i << " >= " << getBoundExpr(Bound.LowerBound, i);
+
+        // Upper bound
+        OS << " && thisid_" << i << " <= " << getBoundExpr(Bound.UpperBound, i) << ")";
+      }
+      OS << ") {\n";
+
+      OS << "{\n";
+
+      Idents.clear();
+      codegenLoads(BF.Expr, OS, Idents);
+
+      const ElementType *ETy = F->getOutput()->getElementType();
+      
+      OS << "  " << getTypeName(ETy) << " Res = ";
+      codegenExpr(BF.Expr, OS);
+      OS << ";\n";
+      
+      OS << "  Buffer_" << Out->getName();
+      for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+        OS << "[elem_" << (G->getNumDimensions()-i-1) << "]";
+      }
+      OS << " = Res;\n";
+      
+      OS << "  }\n";
+
+
     }
-    OS << ") {\n";
 
-    OS << "{\n";
-
-    Idents.clear();
-    codegenLoads(F->getExpression(), OS, Idents);
-
-    const ElementType *ETy = F->getOutput()->getElementType();
-    
-    OS << "  " << getTypeName(ETy) << " Res = ";
-    codegenExpr(F->getExpression(), OS);
-    OS << ";\n";
-    
-    OS << "  Buffer_" << Out->getName();
-    for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
-      OS << "[elem_" << (G->getNumDimensions()-i-1) << "]";
-    }
-    OS << " = Res;\n";
-    
-    OS << "  }\n";
     OS << "} else if (";
     for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
       if (i != 0) OS << " && ";
@@ -290,7 +308,7 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
     //OS << "AddrOffset = min(AddrOffset, array_size-1);\n";
   
 
-    ETy = F->getOutput()->getElementType();
+    const ElementType *ETy = F->getOutput()->getElementType();
 
     OS << getTypeName(ETy) << " temp = *(In_" << Out->getName()
        << " + AddrOffset);\n";
@@ -331,15 +349,15 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
       }
     }
 
-    
+    BoundedFunction BF = *(BFuncs.begin());
 
     Idents.clear();
-    codegenLoads(F->getExpression(), OS, Idents);
+    codegenLoads(BF.Expr, OS, Idents);
 
     ETy = F->getOutput()->getElementType();
     
     OS << "  " << getTypeName(ETy) << " Res = ";
-    codegenExpr(F->getExpression(), OS);
+    codegenExpr(BF.Expr, OS);
     OS << ";\n";
     
     OS << "  Buffer_" << Out->getName();
@@ -424,7 +442,6 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
          E                                                    = Functions.end(); I != E; ++I) {
     Function *F                                               = *I;
     Field    *Out                                             = F->getOutput();
-    const std::vector<std::pair<unsigned, unsigned> > &Bounds = F->getBounds();
 
     for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
       OS << "  for (unsigned elem_" << i << " = 0; elem_" << i << " < ts_" << i << "; ++elem_" << i << ") {\n";
@@ -439,20 +456,51 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
 
     OS << "{\n";
 
-    Idents.clear();
-    codegenLoads(F->getExpression(), OS, Idents);
+    const std::list<BoundedFunction> &BFuncs = F->getBoundedFunctions();
+    for (std::list<BoundedFunction>::const_iterator I = BFuncs.begin(), E = BFuncs.end(), B = I; I != E; ++I) {
 
-    const ElementType *ETy = F->getOutput()->getElementType();
+      BoundedFunction BF = *I;
 
-    OS << "  " << getTypeName(ETy) << " Res = ";
-    codegenExpr(F->getExpression(), OS);
-    OS << ";\n";
+      if (I == B)
+        OS << "  if (";
+      else
+        OS << "  } else if (";
 
-    OS << "    Buffer_" << Out->getName();
-    for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
-      OS << "[elem_" << (G->getNumDimensions()-i-1) << "]";
-    }    
-    OS << " = Res;\n";
+      for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+        FunctionBound Bound = BF.Bounds[i];
+
+        if (i != 0) OS << " && ";
+        
+        // Lower bound
+        OS << "(thisid_" << i << " >= " << getBoundExpr(Bound.LowerBound, i);
+
+        // Upper bound
+        OS << " && thisid_" << i << " <= " << getBoundExpr(Bound.UpperBound, i) << ")";
+      }
+      OS << ") {\n";
+
+      OS << "{\n";
+
+      Idents.clear();
+      codegenLoads(BF.Expr, OS, Idents);
+
+      const ElementType *ETy = F->getOutput()->getElementType();
+      
+      OS << "  " << getTypeName(ETy) << " Res = ";
+      codegenExpr(BF.Expr, OS);
+      OS << ";\n";
+      
+      OS << "  Buffer_" << Out->getName();
+      for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+        OS << "[elem_" << (G->getNumDimensions()-i-1) << "]";
+      }
+      OS << " = Res;\n";
+      
+      OS << "  }\n";
+
+
+    }
+    OS << "}\n";
 
 
 
@@ -478,11 +526,23 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
 
     OS << "    if (";
 
+    // for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+    //   if (i != 0) OS << " && ";
+    //   OS << "(thisid_" << i << " >= " << Bounds[i].first << " && thisid_" << i
+    //      << " < Dim_" << i << " - " << Bounds[i].second << ")";
+    // }
     for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+      FunctionBound Bound = BFuncs.begin()->Bounds[i];
+
       if (i != 0) OS << " && ";
-      OS << "(thisid_" << i << " >= " << Bounds[i].first << " && thisid_" << i
-         << " < Dim_" << i << " - " << Bounds[i].second << ")";
+        
+      // Lower bound
+      OS << "(thisid_" << i << " >= " << getBoundExpr(Bound.LowerBound, i);
+
+      // Upper bound
+      OS << " && thisid_" << i << " <= " << getBoundExpr(Bound.UpperBound, i) << ")";
     }
+
     OS << ") {\n";
 
     //OS << "      SHARED_REF(" << Out->getName();
@@ -538,7 +598,6 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
          E                                                    = Functions.end(); I != E; ++I) {
     Function *F                                               = *I;
     Field    *Out                                             = F->getOutput();
-    const std::vector<std::pair<unsigned, unsigned> > &Bounds = F->getBounds();
 
     for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
       OS << "  for (unsigned elem_" << i << " = 0; elem_" << i << " < ts_" << i << "; ++elem_" << i << ") {\n";
@@ -557,8 +616,9 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
       OS << "(thislocal_" << i << " >= Halo_Left_" << i
          << " && thislocal_" << i << " < blockDim." << getDimensionIndex(i)
          << "*ts_" << i << " - Halo_Right_" << i << " && thisid_" << i
-         << " >= " << Bounds[i].first << " && thisid_" << i
-         << " < Dim_" << i << " - " << Bounds[i].second << ")";
+         << " >= " << /*Bounds[i].first*/0 << " && thisid_" << i
+         << " < Dim_" << i << " - " << /*Bounds[i].second*/0 << ")";
+
     }
     OS << ") {\n";
 
@@ -845,11 +905,10 @@ void CudaBackEnd::codegenHost(llvm::raw_ostream &OS) {
          FE                                                   = Functions.end(); FI != FE; ++FI) {
     Function *F                                               = *FI;
     double    Flops                                           = F->countFlops();
-    const std::vector<std::pair<unsigned, unsigned> > &Bounds = F->getBounds();
 
-    OS << "  Points = (Dim_0-" << (Bounds[0].first+Bounds[0].second) << ")";
-    for (unsigned i = 1, e = Bounds.size(); i < e; ++i) {
-      OS << " * (Dim_" << i << "-" << (Bounds[i].first+Bounds[i].second) << ")";
+    OS << "  Points = (Dim_0)";
+    for (unsigned i = 1, e = G->getNumDimensions(); i < e; ++i) {
+      OS << " * (Dim_" << i << ")";
     }
     OS << ";\n";
     OS << "  Flops = Flops + Points * " << Flops << ";\n";
@@ -1093,5 +1152,25 @@ void CudaBackEnd::codegenFieldRefLoad(FieldRef *Ref, llvm::raw_ostream &OS,
   Idents.insert(VarName);
 }
 
+std::string CudaBackEnd::getBoundExpr(BoundExpr &Expr, unsigned Dim) {
+  std::string Ret;
+  raw_string_ostream Str(Ret);
+
+  Str << "(";
+  if (Expr.Base == (unsigned)(-1)) {
+    Str << "Dim_" << Dim;
+    Str << "-";
+    Str << Expr.Constant;
+    Str << "-1";
+  } else {
+    Str << Expr.Base;
+    Str << "+";
+    Str << Expr.Constant;
+  }
+  Str << ")";
+
+  Str.flush();
+  return Ret;
+}
 
 }

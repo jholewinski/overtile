@@ -14,21 +14,31 @@ class Expression;
 class Field;
 class Region;
 
+/// BoundExpr - A bound expression of the form Base - Constant.
+struct BoundExpr {
+  unsigned Base;
+  unsigned Constant;
+};
+
+/// FunctionBound - A bound on a dimension of a function.
+struct FunctionBound {
+  BoundExpr LowerBound;
+  BoundExpr UpperBound;
+};
+
+/// BoundedFunction - A function expression with its bound.
+struct BoundedFunction {
+  std::vector<FunctionBound> Bounds;
+  Expression *Expr;
+};
+
 /**
  * Representation of a stencil point function.
  */
 class Function {
 public:
-  Function(Field *Out, Expression *E);
+  Function(Field *Out);
   ~Function();
-
-  /// setLowerBound - Sets a bound on the function so it is only applicable
-  /// starting with element \p Offset in the \p Dim dimension.
-  void setLowerBound(unsigned Dim, unsigned Offset);
-
-  /// setUpperBound - Sets a bound on the function so it is only applicable
-  /// below element N - \p Offset in the \p Dim dimension.
-  void setUpperBound(unsigned Dim, unsigned Offset);
 
   /// getInputFields - Returns a set of Field objects that are read when
   /// evaluating this function.
@@ -54,21 +64,22 @@ public:
   Field *getOutput() { return OutField; }
   const Field *getOutput() const { return OutField; }
 
-  Expression *getExpression() { return Expr; }
-  const Expression *getExpression() const { return Expr; }
-
   const std::string &getName() const { return Name; }
   void setName(llvm::StringRef N) { Name = N.data(); }
 
-  const std::vector<std::pair<unsigned, unsigned> >
-  &getBounds() const { return Bounds; }
+  void addBoundedFunction(BoundedFunction Func) { Functions.push_back(Func); }
+  const std::list<BoundedFunction> &getBoundedFunctions() const { 
+    return Functions;
+  }
 
 private:
 
+  typedef std::list<BoundedFunction> FunctionList;
+
+
   Field       *OutField;
-  Expression  *Expr;
-  std::vector<std::pair<unsigned, unsigned> > Bounds;
   std::string  Name;
+  FunctionList Functions;
 };
 
 }

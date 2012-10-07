@@ -16,36 +16,23 @@ using namespace llvm;
 
 namespace overtile {
 
-Function::Function(Field *Out, Expression *Ex)
-  : OutField(Out), Expr(Ex) {
+Function::Function(Field *Out)
+  : OutField(Out) {
   assert(Out != NULL && "Out cannot be NULL");
-  assert(Ex != NULL && "Ex cannot be NULL");
 
   unsigned Dimensions = Out->getGrid()->getNumDimensions();
-  
-  for (unsigned i = 0; i < Dimensions; ++i) {
-    Bounds.push_back(std::make_pair<unsigned, unsigned>(0, 0));
-  }
 }
 
 Function::~Function() {
 }
 
-void Function::setLowerBound(unsigned Dim, unsigned Offset) {
-  unsigned Dimensions = OutField->getGrid()->getNumDimensions();
-  assert(Dim < Dimensions && "Dim is too high");
-  Bounds[Dim].first   = Offset;
-}
-
-void Function::setUpperBound(unsigned Dim, unsigned Offset) {
-  unsigned Dimensions = OutField->getGrid()->getNumDimensions();
-  assert(Dim < Dimensions && "Dim is too high");
-  Bounds[Dim].second  = Offset;
-}
-
 std::set<Field*> Function::getInputFields() const {
   std::set<Field*> Fields;
-  Expr->getFields(Fields);
+
+  for (std::list<BoundedFunction>::const_iterator I = Functions.begin(), E = Functions.end(); I != E; ++I) {
+    I->Expr->getFields(Fields);
+  }
+
   return Fields;
 }
 
@@ -188,7 +175,10 @@ void Function::
 adjustRegion(Field                   *F, Region &FRegion, const Region &InRegion,
              const std::list<Field*> &UpdateOrder, bool LastTS) const {
   FieldRefVisitor V(F, FRegion, InRegion, UpdateOrder, LastTS, this);
-  V.visitExpr(Expr);
+
+  for (std::list<BoundedFunction>::const_iterator I = Functions.begin(), E = Functions.end(); I != E; ++I) {
+    V.visitExpr(I->Expr);
+  }
 }
 
 
@@ -268,7 +258,10 @@ void Function::getMaxOffsets(const Field *F, unsigned Dim, unsigned &LeftMax,
   RightMax = 0;
   
   MaxOffsetVisitor V(F, Dim, LeftMax, RightMax);
-  V.visitExpr(Expr);  
+
+  for (std::list<BoundedFunction>::const_iterator I = Functions.begin(), E = Functions.end(); I != E; ++I) {
+    V.visitExpr(I->Expr);
+  }  
 }
 
 
@@ -324,9 +317,15 @@ private:
 
 
 double Function::countFlops() const {
-  FlopsVisitor V;
-  V.visitExpr(Expr);
-  return V.getFlops();
+  double Flops = 0.0;
+
+  for (std::list<BoundedFunction>::const_iterator I = Functions.begin(), E = Functions.end(); I != E; ++I) {
+    FlopsVisitor V;
+    V.visitExpr(I->Expr);
+    Flops = std::max(Flops, V.getFlops());
+  }
+
+  return Flops;
 }
 
 

@@ -39,8 +39,11 @@ int main() {
   grid 1
   field A float inout
   field B float inout
-    B[1:1] = 0.333*(A[-1]+A[0])
-    A[1:1] = 0.2*(B[0]+B[1])
+    B = 
+    @[1:$-1] : 0.333*(A[-1]+A[0])
+    
+    A = 
+    @[1:$-1] : 0.2*(B[0]+B[1])
 #pragma overtile end
 
 

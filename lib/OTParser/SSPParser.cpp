@@ -1,6 +1,7 @@
 
 #include "overtile/Core/Error.h"
 #include "overtile/Core/Expressions.h"
+#include "overtile/Core/Function.h"
 #include "overtile/Core/Types.h"
 #include "overtile/Parser/SSPParser.h"
 #include "SSPParserGenerated.h"
@@ -88,6 +89,12 @@ int SSPParser::getNextToken(void *Val) {
   } else if (*CurCh == '/') {
     CurPos++;
     return SLASH;
+  } else if (*CurCh == '$') {
+    CurPos++;
+    return DOLLAR;
+  } else if (*CurCh == '@') {
+    CurPos++;
+    return AT;
   } else if (IsAlpha(*CurCh)) {
     const char *Start  = CurCh;
     size_t      Length = 0;
@@ -102,7 +109,7 @@ int SSPParser::getNextToken(void *Val) {
     StringRef *Str = new StringRef(Start, Length);
 
     // Check for keywords
-    if (Str->compare("double")          == 0) {
+    if (Str->compare("double")   == 0) {
       return DOUBLE;
     } else if (Str->compare("field")    == 0) {
       return FIELD;
@@ -120,7 +127,7 @@ int SSPParser::getNextToken(void *Val) {
       return LET;
     } else if (Str->compare("out")      == 0) {
       return OUT;
-    } else if (Str->compare("param")  == 0) {
+    } else if (Str->compare("param")    == 0) {
       return PARAM;
     } else if (Str->compare("program")  == 0) {
       return PROGRAM;

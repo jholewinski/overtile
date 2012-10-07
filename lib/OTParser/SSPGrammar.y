@@ -35,10 +35,16 @@ void SSPerror(SSPParser*, const char*);
   overtile::ElementType               *Type;
   std::vector<overtile::IntConstant*> *IntList;
   std::pair<unsigned, unsigned>       *Bound;
-  std::vector<std::pair<unsigned, unsigned> > *BoundList;
+  std::vector<overtile::FunctionBound> *BoundList;
   std::vector<overtile::Expression*>  *ExprList;
+  std::list<overtile::BoundedFunction*> *FuncExprList;
+  overtile::BoundExpr BExpr;
+  overtile::FunctionBound FuncBound;
+  overtile::BoundedFunction *FuncExpr;
 }
 
+%token AT
+%token DOLLAR
 %token DOUBLE
 %token FIELD
 %token FLOAT
@@ -71,9 +77,12 @@ void SSPerror(SSPParser*, const char*);
 %type<Expr> expression
 %type<Expr> field_ref
 %type<Type> type
-%type<Bound> application_bound
+%type<FuncBound> application_bound
 %type<BoundList> application_bounds
 %type<ExprList> expr_list
+%type<BExpr> bound_expr
+%type<FuncExprList> func_expr_list;
+%type<FuncExpr> func_expr;
 
 %%
 
@@ -138,7 +147,7 @@ application_list
 ;
 
 application_def
-: IDENT application_bounds EQUALS expression {
+: IDENT EQUALS func_expr_list {
     Grid *G = Parser->getGrid();
     Field *Out = G->getFieldByName(*$1);
 
@@ -151,54 +160,73 @@ application_def
       YYERROR;
     }
 
-    Expression *E = $4;
-    Function *Func = new Function(Out, E);
+    Function *Func = new Function(Out);
 
-    std::vector<PlaceHolderExpr*> PHExpr;
-    E->getPlaceHolders(PHExpr);
-
-    // Place-holders are now parameters
-    //for (unsigned i = 0, e = PHExpr.size(); i != e; ++i) {
-    //  std::string        Msg;
-    //  raw_string_ostream MsgStr(Msg);
-    //  MsgStr << "Unknown reference: '" << PHExpr[i]->getName() << "'";
-    //  MsgStr.flush();
-    //  yyerror(Parser, Msg.c_str());
-    //}
-    //if (PHExpr.size() > 0) {
-    //  YYERROR;
-    //}
-
-    std::vector<std::pair<unsigned, unsigned> > *Bounds = $2;
-    for (unsigned i = 0, e = Bounds->size(); i < e; ++i) {
-      std::pair<unsigned, unsigned> B = (*Bounds)[i];
-      Func->setLowerBound(i, B.first);
-      Func->setUpperBound(i, B.second);
+    for (std::list<overtile::BoundedFunction*>::iterator I = $3->begin(), E = $3->end(); I != E; ++I) {
+      Func->addBoundedFunction(*(*I));
     }
-    delete Bounds;
+
+    delete $3;
 
     G->appendFunction(Func);
+  }
+;
+
+func_expr_list
+: func_expr func_expr_list {
+    $$ = $2;
+    $$->push_front($1);
+  }
+| func_expr {
+    $$ = new std::list<BoundedFunction*>();
+    $$->push_front($1);
+  }
+;
+
+func_expr
+: AT application_bounds COLON expression {
+    $$ = new BoundedFunction;
+    $$->Bounds = *$2;
+    $$->Expr = $4;
+    delete $2;
   }
 ;
 
 application_bounds
 : application_bound application_bounds {
     $$ = $2;
-    $$->push_back(*$1);
-    delete $1;
+    $$->push_back($1);
   }
 | application_bound {
-    $$ = new std::vector<std::pair<unsigned, unsigned> >();
-    $$->push_back(*$1);
-    delete $1;
+    $$ = new std::vector<FunctionBound>();
+    $$->push_back($1);
   }
 ;
 
 application_bound
-: OPENBRACE INTCONST COLON INTCONST CLOSEBRACE {
-    $$ = new std::pair<unsigned, unsigned>($2, $4);
+: OPENBRACE bound_expr COLON bound_expr CLOSEBRACE {
+    $$.LowerBound = $2;
+    $$.UpperBound = $4;
+  }
+| OPENBRACE bound_expr CLOSEBRACE {
+    $$.LowerBound = $2;
+    $$.UpperBound = $2;
   }
 ;
+
+bound_expr
+: int_constant {
+    $$.Base = 0;
+    $$.Constant = $1;
+  }
+| DOLLAR {
+    $$.Base = (unsigned)(-1);
+    $$.Constant = 0;
+  }
+| DOLLAR MINUS int_constant {
+    $$.Base = (unsigned)(-1);
+    $$.Constant = $3;
+  }
 
 expression
 : additive_expr {

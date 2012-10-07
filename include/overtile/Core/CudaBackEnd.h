@@ -9,6 +9,7 @@
 namespace overtile {
 
 class BinaryOp;
+struct BoundExpr;
 class ConstantExpr;
 class ElementType;
 class Expression;
@@ -47,6 +48,8 @@ private:
 
   void codegenLoads(Expression *Expr, llvm::raw_ostream &OS, std::set<std::string> &Idents);
   void codegenFieldRefLoad(FieldRef *Ref, llvm::raw_ostream &OS, std::set<std::string> &Idents);
+
+  std::string getBoundExpr(BoundExpr &Expr, unsigned Dim);
 };
 
 }

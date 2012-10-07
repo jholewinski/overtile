@@ -27,16 +27,16 @@ if dim == 2:
     problem_size = 6000
     gstencils_factor = float(problem_size)*float(problem_size)*float(time_steps)/1e9
 elif dim == 3:
-    x_range = range(8, 16+1, 4)
+    x_range = range(4, 16+1, 4)
     y_range = range(4, 8+1, 2)
     z_range = range(4, 8+1, 2)
     t_range = range(1, 3+1, 1)
     #ex_range = range(1, 12+1, 1)
     ex_range = [1]
-    ey_range = range(1, 3+1, 1)
-    ez_range = range(1, 3+1, 1)
+    ey_range = range(1, 6+1, 1)
+    ez_range = range(1, 6+1, 1)
 
-    problem_size = 500
+    problem_size = 400
     gstencils_factor = float(problem_size)*float(problem_size)*float(problem_size)*float(time_steps)/1e9
 else:
     print('Unknown dimensionality!')

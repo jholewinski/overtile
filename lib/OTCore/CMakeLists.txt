@@ -7,7 +7,6 @@ add_llvm_library(OTCore
   Field.cpp
   Function.cpp
   Grid.cpp
-  OpenCLBackEnd.cpp
   Region.cpp
   Types.cpp
 )
