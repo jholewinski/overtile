@@ -436,6 +436,16 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
   
   OS << "  // Remaining time steps\n";
   InTS0 = false;
+
+
+  OS << " if (blockIdx.x == 0 || blockIdx.x == gridDim.x-1";
+  for (unsigned i = 1, e = G->getNumDimensions(); i < e; ++i) {
+    OS << " || blockIdx." << getDimensionIndex(i) << " == 0 || blockIdx." << getDimensionIndex(i) << " == gridDim." << getDimensionIndex(i) << "-1";
+  }
+  OS << " ) {\n";
+
+  // Begin boundary case
+
   OS << "  for (int t = 1; t < " << getTimeTileSize() << "; ++t) {\n";
 
   for (std::list<Function*>::iterator I = Functions.begin(),
@@ -593,6 +603,147 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
   }
   
   OS << "  }\n";
+
+  OS << "} else {\n";
+
+  // Interior case
+
+  OS << "  for (int t = 1; t < " << getTimeTileSize() << "; ++t) {\n";
+
+  for (std::list<Function*>::iterator I = Functions.begin(),
+         E                                                    = Functions.end(); I != E; ++I) {
+    Function *F                                               = *I;
+    Field    *Out                                             = F->getOutput();
+
+    for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+      OS << "  for (unsigned elem_" << i << " = 0; elem_" << i << " < ts_" << i << "; ++elem_" << i << ") {\n";
+      if (i != 0) {
+        OS << "  int thisid_" << i << " = tid_" << i << " + elem_" << i << ";\n";
+        OS << "  int thislocal_" << i << " = threadIdx." << getDimensionIndex(i) << "*ts_" << i << " + elem_" << i << ";\n";
+      } else {
+        OS << "  int thisid_" << i << " = tid_" << i << " + elem_" << i << "*blockDim." << getDimensionIndex(i) << ";\n";
+        OS << "  int thislocal_" << i << " = local_" << i << " + elem_" << i << "*blockDim." << getDimensionIndex(i) << ";\n";
+      }
+    }
+
+    OS << "{\n";
+
+    const std::list<BoundedFunction> &BFuncs = F->getBoundedFunctions();
+  
+    BoundedFunction BF = *(BFuncs.begin());
+
+    OS << "{\n";
+
+    Idents.clear();
+    codegenLoads(BF.Expr, OS, Idents);
+
+    const ElementType *ETy = F->getOutput()->getElementType();
+    
+    OS << "  " << getTypeName(ETy) << " Res = ";
+    codegenExpr(BF.Expr, OS);
+    OS << ";\n";
+    
+    OS << "  Buffer_" << Out->getName();
+    for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+      OS << "[elem_" << (G->getNumDimensions()-i-1) << "]";
+    }
+    OS << " = Res;\n";
+    
+    OS << "  }\n";
+
+
+    for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+      OS << "  }\n";
+    }
+
+    OS << "}\n";
+
+    OS << " __syncthreads();\n";
+    
+    for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+      OS << "  for (unsigned elem_" << i << " = 0; elem_" << i << " < ts_" << i << "; ++elem_" << i << ") {\n";
+      if (i != 0) {
+        OS << "  int thisid_" << i << " = tid_" << i << " + elem_" << i << ";\n";
+        OS << "  int thislocal_" << i << " = threadIdx." << getDimensionIndex(i) << "*ts_" << i << " + elem_" << i << ";\n";
+      } else {
+        OS << "  int thisid_" << i << " = tid_" << i << " + elem_" << i << "*blockDim." << getDimensionIndex(i) << ";\n";
+        OS << "  int thislocal_" << i << " = local_" << i << " + elem_" << i << "*blockDim." << getDimensionIndex(i) << ";\n";
+      }
+    }
+
+
+    OS << "    if (";
+
+    // for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+    //   if (i != 0) OS << " && ";
+    //   OS << "(thisid_" << i << " >= " << Bounds[i].first << " && thisid_" << i
+    //      << " < Dim_" << i << " - " << Bounds[i].second << ")";
+    // }
+    for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+      FunctionBound Bound = BFuncs.begin()->Bounds[i];
+
+      if (i != 0) OS << " && ";
+        
+      // Lower bound
+      OS << "(thisid_" << i << " >= " << getBoundExpr(Bound.LowerBound, i);
+
+      // Upper bound
+      OS << " && thisid_" << i << " <= " << getBoundExpr(Bound.UpperBound, i) << ")";
+    }
+
+    OS << ") {\n";
+
+    //OS << "      SHARED_REF(" << Out->getName();
+    //for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+    //  OS << ", 0";
+    //}
+    //OS << ") = temp_" << Out->getName() << ";\n";
+  
+    /*OS << "AddrOffset = ";
+    unsigned DimTerms = 0;
+    unsigned Dim      = 0;
+    for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+      if (i != 0) OS << " + ";
+      OS << "(thislocal_" << i << "+max_left_offset_" << i << ")";
+      for (unsigned i = 0; i < DimTerms; ++i) {
+        OS << "*shared_size_" << i;
+      }
+      ++DimTerms;
+      ++Dim;
+    }
+    OS << ";\n";
+    OS << "*(Shared_" << Out->getName() << " + AddrOffset) = Buffer_" << Out->getName();
+    for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+      OS << "[elem_" << (G->getNumDimensions()-i-1) << "]";
+    }
+    OS << ";\n";*/
+
+
+    OS << "Shared_" << Out->getName();
+    for (int i = G->getNumDimensions()-1, e = 0; i >= e; --i) {
+      OS << "[thislocal_" << i << "+" << SharedMaxLeft[i] << "]";
+    }
+    OS << " = Buffer_" << Out->getName();
+    for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+      OS << "[elem_" << (G->getNumDimensions()-i-1) << "]";
+    }
+    OS << ";\n";
+
+
+    
+    OS << "    }\n";
+
+    for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
+      OS << "  }\n";
+    }
+
+    OS << " __syncthreads();\n";
+  }
+  
+  OS << "  }\n";
+    
+
+  OS << "}\n";
 
   for (std::list<Function*>::iterator I = Functions.begin(),
          E                                                    = Functions.end(); I != E; ++I) {
