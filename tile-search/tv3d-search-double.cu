@@ -38,7 +38,7 @@ int main() {
 
 #ifndef REF_TEST
   
-#pragma overtile begin time_steps:TIME_STEPS TILE_SIZE_PARAMS
+#pragma sdsl begin time_steps:TIME_STEPS TILE_SIZE_PARAMS
 
   program tv3d is
     
@@ -59,7 +59,7 @@ int main() {
     (alpha*Image[0][0][0] + c1*(Image[1][0][0] + Image[0][1][0] + Image[0][0][1]) + c2*Image[-1][0][0] + c3*Image[0][-1][0] + c4*Image[0][0][-1])/(alpha + 3.0*c1 + c2 + c3 + c4)
 
     
-#pragma overtile end
+#pragma sdsl end
 
 #endif
 

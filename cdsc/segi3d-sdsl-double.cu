@@ -50,7 +50,7 @@ int RunSegmentation3D(double *u0, double *phi, size_t Dim_0, size_t Dim_1, size_
 
     double DT = DT2;
 
-#pragma overtile begin time_steps:IterPerKernel block:8,8,8 tile:1,1,1 time:1
+#pragma sdsl begin time_steps:IterPerKernel block:8,8,8 tile:1,1,1 time:1
 int                                   Nx;
 int                                   Ny;
 int                                   Nz;
@@ -127,7 +127,7 @@ iterate 100 {
   }
 } check (0 == 0) every 100 iterations
 
-#pragma overtile end
+#pragma sdsl end
     }
 
   return 0;

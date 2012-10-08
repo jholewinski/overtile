@@ -186,7 +186,7 @@ int main(int argc, char **argv) {
     // Extract SSP regions
     for (unsigned i = 0, e = Lines.size(); i != e; ++i) {
       
-      bool Start = Lines[i].ltrim().startswith("#pragma overtile begin");
+      bool Start = Lines[i].ltrim().startswith("#pragma sdsl begin");
 
       if (Start) {
         SSPRegion Reg;
@@ -196,7 +196,7 @@ int main(int argc, char **argv) {
         
         for (; i != e; ++i) {
 
-          bool End = Lines[i].ltrim().startswith("#pragma overtile end");
+          bool End = Lines[i].ltrim().startswith("#pragma sdsl end");
 
           if (End) {
             Reg.LastLine  = i;
@@ -204,7 +204,7 @@ int main(int argc, char **argv) {
           } else {
             Reg.SSP      += Lines[i].str();
             if (i+1 == e) {
-              llvm::errs() << "No '#pragma overtile end' found\n";
+              llvm::errs() << "No '#pragma sdsl end' found\n";
               return 1;
             }
           }

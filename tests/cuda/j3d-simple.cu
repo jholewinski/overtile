@@ -39,13 +39,13 @@ int main() {
 
 
   // OT Run
-#pragma overtile begin time_steps:TimeSteps block:8,8,8 tile:2,2,2 time:2
+#pragma sdsl begin time_steps:TimeSteps block:8,8,8 tile:2,2,2 time:2
   program j3d is
   grid 3
   field A float inout
     A = 
     @[1:$-1][1:$-1][1:$-1] : 0.143*(A[0][0][-1]+A[0][0][0]+A[0][0][1]+A[0][-1][0]+A[0][1][0]+A[-1][0][0]+A[1][0][0])
-#pragma overtile end
+#pragma sdsl end
 
 
   // Comparison

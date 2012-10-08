@@ -40,7 +40,7 @@ int main() {
 
 #ifndef REF_TEST
   
-#pragma overtile begin time_steps:TIME_STEPS TILE_SIZE_PARAMS
+#pragma sdsl begin time_steps:TIME_STEPS TILE_SIZE_PARAMS
 
   program rician2d is
   grid 2
@@ -93,7 +93,7 @@ int main() {
       (1.0 + DT*(g_0_p1 + g_0_m1 + g_m1_0 + g_p1_0 + gamma))
 
     
-#pragma overtile end
+#pragma sdsl end
 
 #endif
 

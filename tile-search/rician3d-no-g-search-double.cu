@@ -38,7 +38,7 @@ int main() {
 
   double Start = rtclock();
 
-#pragma overtile begin time_steps:TIME_STEPS TILE_SIZE_PARAMS
+#pragma sdsl begin time_steps:TIME_STEPS TILE_SIZE_PARAMS
 
   program rician3d is
   grid 3
@@ -120,7 +120,7 @@ int main() {
       (1.0 + DT*(g_0_0_1 + g_0_0_m1 + g_0_m1_0 + g_0_1_0 + g_m1_0_0 + g_1_0_0 + gamma))
 
     
-#pragma overtile end
+#pragma sdsl end
 
 
   double Stop = rtclock();

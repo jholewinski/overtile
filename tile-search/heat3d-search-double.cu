@@ -36,7 +36,7 @@ int main() {
   const double      C1 = 2.0f;
   const double C2 = 0.125f;
   
-#pragma overtile begin time_steps:TIME_STEPS TILE_SIZE_PARAMS
+#pragma sdsl begin time_steps:TIME_STEPS TILE_SIZE_PARAMS
 
   program heat3d is
   grid 3
@@ -47,7 +47,7 @@ int main() {
     + 0.125 * (A[0][1][0] - 2.0 * A[0][0][0] + A[0][-1][0])
     + 0.125 * (A[0][0][1] - 2.0 * A[0][0][0] + A[0][0][-1])
     + A[0][0][0]
-#pragma overtile end
+#pragma sdsl end
 
    double Stop = rtclock();
 

@@ -33,7 +33,7 @@ int RunRician3D(float *U, float *F, size_t Dim_0, size_t Dim_1, size_t Dim_2) {
     memcpy(OldU, U, sizeof(float)*Dim_0*Dim_1*Dim_2);
     
     // Run kernel
-#pragma overtile begin time_steps:IterPerCall block:16,8,8 tile:1,1,1 time:1
+#pragma sdsl begin time_steps:IterPerCall block:16,8,8 tile:1,1,1 time:1
 int Nx;
 int Ny;
 int Nz;
@@ -94,7 +94,7 @@ iterate 100 {
     [1:Nz-1][1:Ny-1][1:Nx-1] : update_u(U, G, F); 
   }
 } check (0) every 10 iterations    
-#pragma overtile end
+#pragma sdsl end
 
     // Check for convergence
     Converged = true;

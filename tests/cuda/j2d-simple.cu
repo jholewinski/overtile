@@ -36,13 +36,13 @@ int main() {
 
 
   // OT Run
-#pragma overtile begin time_steps:TimeSteps block:32,4 tile:2,4 time:4
+#pragma sdsl begin time_steps:TimeSteps block:32,4 tile:2,4 time:4
   program j2d is
   grid 2
   field A float inout
     A = 
     @[1:$-1][1:$-1] : 0.2*(A[0][-1]+A[0][0]+A[0][1]+A[-1][0]+A[1][0])
-#pragma overtile end
+#pragma sdsl end
 
 
   // Comparison

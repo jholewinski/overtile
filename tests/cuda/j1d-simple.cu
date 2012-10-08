@@ -33,13 +33,13 @@ int main() {
 
 
   // OT Run
-#pragma overtile begin time_steps:TimeSteps block:256 tile:8 time:4
+#pragma sdsl begin time_steps:TimeSteps block:256 tile:8 time:4
   program j1d is
   grid 1
   field A float inout
     A = 
     @[1:$-1] : 0.333*(A[-1]+A[0]+A[1])
-#pragma overtile end
+#pragma sdsl end
 
 
   // Comparison

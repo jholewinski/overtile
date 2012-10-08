@@ -33,7 +33,7 @@ int RunRician3D(double *U, double *F, size_t Dim_0, size_t Dim_1, size_t Dim_2) 
     memcpy(OldU, U, sizeof(double)*Dim_0*Dim_1*Dim_2);
     
     // Run kernel
-#pragma overtile begin time_steps:IterPerCall block:8,8,8 tile:1,1,1 time:1
+#pragma sdsl begin time_steps:IterPerCall block:8,8,8 tile:1,1,1 time:1
 
     program rician3d is
       grid 3
@@ -76,7 +76,7 @@ int RunRician3D(double *U, double *F, size_t Dim_0, size_t Dim_1, size_t Dim_2) 
       (1.0 + DT*(G[0][0][1] + G[0][0][-1] + G[0][-1][0] + G[0][1][0] + G[-1][0][0] + G[1][0][0] + gamma))
 
     
-#pragma overtile end
+#pragma sdsl end
 
     // Check for convergence
     Converged = true;

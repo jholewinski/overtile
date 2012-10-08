@@ -34,7 +34,7 @@ int main() {
 
   double Start = rtclock();
 
-#pragma overtile begin time_steps:TIME_STEPS TILE_SIZE_PARAMS
+#pragma sdsl begin time_steps:TIME_STEPS TILE_SIZE_PARAMS
 
 program tv2d is
 
@@ -55,7 +55,7 @@ program tv2d is
        
     1.0 / (alpha+c1+c2+c3+c4)*(alpha*f[0][0]+c1*u[1][0]+c2*u[-1][0]+c3*u[0][1]+c4*u[0][-1])
 
-#pragma overtile end
+#pragma sdsl end
 
   double Stop = rtclock();
 

@@ -47,7 +47,7 @@ int main() {
 
 
   // OT Run
-#pragma overtile begin time_steps:TimeSteps block:32,4 tile:1,4 time:4
+#pragma sdsl begin time_steps:TimeSteps block:32,4 tile:1,4 time:4
   program fdtd2d is
   grid 2
   field Ex float inout
@@ -60,7 +60,7 @@ int main() {
     @[0:$][1:$] : Ex[0][0] - 0.5*(Hz[0][0] - Hz[0][-1])
     Hz = 
     @[0:$-1][0:$-1] : Hz[0][0] - 0.7*(Ex[0][1] - Ex[0][0] + Ey[1][0] - Ey[0][0])
-#pragma overtile end
+#pragma sdsl end
 
 
   // Comparison

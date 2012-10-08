@@ -33,7 +33,7 @@ int main() {
 
   double Start = rtclock();
   
-#pragma overtile begin time_steps:TIME_STEPS TILE_SIZE_PARAMS
+#pragma sdsl begin time_steps:TIME_STEPS TILE_SIZE_PARAMS
 
   program j3d is
   grid 3
@@ -41,7 +41,7 @@ int main() {
     
     A[1:1][1:1][1:1] = 0.143 * (A[-1][0][0] + A[0][0][0] + A[1][0][0] + A[0][-1][0] + A[0][1][0] + A[0][0][-1] + A[0][0][1])
 
-#pragma overtile end
+#pragma sdsl end
 
   double Stop = rtclock();
 

@@ -34,7 +34,7 @@ int main() {
 
   double Start = rtclock();
   
-#pragma overtile begin time_steps:TIME_STEPS TILE_SIZE_PARAMS
+#pragma sdsl begin time_steps:TIME_STEPS TILE_SIZE_PARAMS
 
   program fdtd2d is
   grid 2
@@ -46,7 +46,7 @@ int main() {
     Ex[0:0][1:0] = Ex[0][0] - 0.5*(Hz[0][0] - Hz[0][-1])
     Hz[0:1][0:1] = Hz[0][0] - 0.7*(Ex[0][1] - Ex[0][0] + Ey[1][0] - Ey[0][0])
     
-#pragma overtile end
+#pragma sdsl end
 
   double Stop = rtclock();
 

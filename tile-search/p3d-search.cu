@@ -33,7 +33,7 @@ int main() {
 
   double Start = rtclock();
   
-#pragma overtile begin time_steps:TIME_STEPS TILE_SIZE_PARAMS
+#pragma sdsl begin time_steps:TIME_STEPS TILE_SIZE_PARAMS
 
   program p3d is
   grid 3
@@ -71,7 +71,7 @@ int main() {
        
        
 
-#pragma overtile end
+#pragma sdsl end
 
   double Stop = rtclock();
 

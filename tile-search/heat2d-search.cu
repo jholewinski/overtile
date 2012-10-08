@@ -32,14 +32,14 @@ int main() {
 
   double Start = rtclock();
 
-#pragma overtile begin time_steps:TIME_STEPS TILE_SIZE_PARAMS
+#pragma sdsl begin time_steps:TIME_STEPS TILE_SIZE_PARAMS
 
   program heat2d is
   grid 2
   field A float inout
     
     A[1:1][1:1] = 0.125 * (A[1][0] - 2.0 * A[0][0] + A[-1][0]) + 0.125 * (A[0][1] - 2.0 * A[0][0] + A[0][-1]) + A[0][0]
-#pragma overtile end
+#pragma sdsl end
 
   double Stop = rtclock();
 

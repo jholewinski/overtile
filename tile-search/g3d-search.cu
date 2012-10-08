@@ -33,7 +33,7 @@ int main() {
 
   double Start = rtclock();
   
-#pragma overtile begin time_steps:TIME_STEPS TILE_SIZE_PARAMS
+#pragma sdsl begin time_steps:TIME_STEPS TILE_SIZE_PARAMS
 
   program g3d is
   grid 3
@@ -49,7 +49,7 @@ int main() {
     let p5 = (A[0][0][0] - A[-1][0][0]) * (A[0][0][0] - A[-1][0][0]) in
       A[0][0][0] + rsqrt(0.00001 + p0 + p1 + p2 + p3 + p4 + p5)
 
-#pragma overtile end
+#pragma sdsl end
 
   double Stop = rtclock();
 
