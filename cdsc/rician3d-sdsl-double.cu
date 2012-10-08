@@ -6,9 +6,9 @@
 #include <iostream>
 
 namespace {
-const size_t MaxIter     = 1000;
-const size_t IterPerCall = 4;
-const double  Tolerance   = 2e-3f;
+const size_t MaxIter     = 50;
+const size_t IterPerCall = 1;
+const double Tolerance   = 2e-3;
 }
 
 
@@ -33,7 +33,7 @@ int RunRician3D(double *U, double *F, size_t Dim_0, size_t Dim_1, size_t Dim_2) 
     memcpy(OldU, U, sizeof(double)*Dim_0*Dim_1*Dim_2);
     
     // Run kernel
-#pragma sdsl begin time_steps:IterPerCall block:8,8,8 tile:1,1,1 time:1
+#pragma sdsl begin time_steps:IterPerCall block:8,8,8 tile:1,3,1 time:1
 int Nx;
 int Ny;
 int Nz;
@@ -77,21 +77,21 @@ pointfunction update_u(u,g,f) {
                          [0]u[-1][ 0][ 0]*[0]g[-1][ 0][ 0] +
                          gamma*[0]f[0][0][0]*r))
                    /
-                    (1.0 + DT*[1]g[ 0][ 1][ 0] +
-                              [1]g[ 0][-1][ 0] +
-                              [1]g[ 0][ 0][ 1] +
-                              [1]g[ 0][ 0][-1] +
-                              [1]g[ 1][ 0][ 0] +
-                              [1]g[-1][ 0][ 0] +
-                              gamma);
+                    (1.0 + DT*([1]g[ 0][ 1][ 0] +
+                               [1]g[ 0][-1][ 0] +
+                               [1]g[ 0][ 0][ 1] +
+                               [1]g[ 0][ 0][-1] +
+                               [1]g[ 1][ 0][ 0] +
+                               [1]g[-1][ 0][ 0] +
+                               gamma));
 }
 
 iterate 100 {
   stencil gs {
-    [1:Nz-1][1:Ny-1][1:Nx-1] : approx_g(U,G); 
+    [1:Nz-2][1:Ny-2][1:Nx-2] : approx_g(U,G); 
   }
   stencil us {
-    [1:Nz-1][1:Ny-1][1:Nx-1] : update_u(U, G, F); 
+    [1:Nz-2][1:Ny-2][1:Nx-2] : update_u(U, G, F); 
   }
 } check (0) every 10 iterations    
 #pragma sdsl end
@@ -113,12 +113,11 @@ iterate 100 {
 
   
   if (Iter >= MaxIter) {
+    std::cout << "DID NOT CONVERGE!\n";
     return 0;                   // Did not converge!
   }
 
-#ifdef STANDALONE_DRIVER
   std::cout << "Converged in <= " << Iter << " iterations\n";
-#endif
 
   return Iter;
 }
