@@ -29,7 +29,8 @@ public:
   virtual void codegen(llvm::raw_ostream &OS) = 0;
 
   virtual std::string getCanonicalPrototype() { return ""; }
-  virtual std::string getCanonicalInvocation(llvm::StringRef TimeStepExpr) {
+  virtual std::string getCanonicalInvocation(llvm::StringRef TimeStepExpr,
+                                             llvm::StringRef ConvTolExpr) {
     return "";
   }
   
@@ -77,6 +78,12 @@ public:
   bool getVerbose() const { return Verbose; }
   void setVerbose(bool V) { Verbose = V; }
 
+  void setConvergeField(const Field *F) {
+    ConvergeField = F;
+  }
+
+  const Field *getConvergeField() const { return ConvergeField; }
+
   const std::map<const Field*, Region> &getRegionMap() const { return Regions; }
   
 private:
@@ -93,6 +100,7 @@ private:
   CGExpressionList  CGExprs;
   RegionMap         Regions;
   bool              Verbose;
+  const Field      *ConvergeField;
 };
 
 }

@@ -813,7 +813,13 @@ std::string CudaBackEnd::getCanonicalPrototype() {
   Grid                 *G         = getGrid();
   std::list<Function*>  Functions = G->getFunctionList();
 
-  OS << "void ot_program_" << G->getName() << "(int timesteps";
+  if (getConvergeField()) {
+    OS << "bool ";
+  } else {
+    OS << "void ";
+  }
+
+  OS << "ot_program_" << G->getName() << "(int timesteps";
     
   // Generate in/out parameters for each field
   std::list<Field*> Fields = G->getFieldList();
@@ -836,19 +842,28 @@ std::string CudaBackEnd::getCanonicalPrototype() {
     OS << ", " << getTypeName(I->second) << " " << I->first;
   }
 
+  if (getConvergeField()) {
+    OS << ", " << getTypeName(getConvergeField()->getElementType()) << " Tolerance";
+  }
+
   OS << ");\n";
 
   OS.flush();
   return Ret;
 }
 
-std::string CudaBackEnd::getCanonicalInvocation(StringRef TimeStepExpr) {
+std::string CudaBackEnd::getCanonicalInvocation(StringRef TimeStepExpr,
+                                                StringRef ConvTolExpr) {
 
-    std::string              Ret;
+  std::string              Ret;
   llvm::raw_string_ostream OS(Ret);
   
   Grid                 *G         = getGrid();
   std::list<Function*>  Functions = G->getFunctionList();
+
+  if (getConvergeField()) {
+    OS << "bool Converged = ";
+  }
 
   OS << "ot_program_" << G->getName() << "(" << TimeStepExpr;
     
@@ -873,6 +888,10 @@ std::string CudaBackEnd::getCanonicalInvocation(StringRef TimeStepExpr) {
     OS << ", " << I->first;
   }
 
+  if (getConvergeField()) {
+    OS << ", " << ConvTolExpr;
+  }
+
   OS << ");\n";
 
   OS.flush();
@@ -894,7 +913,13 @@ void CudaBackEnd::codegenHost(llvm::raw_ostream &OS) {
   OS << "#include <iostream>\n";
   OS << "#include <algorithm>\n";
   OS << "#include <cassert>\n";
-  OS << "void ot_program_" << G->getName() << "(int timesteps";
+
+  if (getConvergeField()) {
+    OS << "bool ";
+  } else {
+    OS << "void ";
+  }
+  OS << "ot_program_" << G->getName() << "(int timesteps";
   // Generate in/out parameters for each field
   std::list<Field*> Fields = G->getFieldList();
 
@@ -914,6 +939,10 @@ void CudaBackEnd::codegenHost(llvm::raw_ostream &OS) {
   for (ParamList::const_iterator I = Params.begin(), E = Params.end(); I != E;
        ++I) {
     OS << ", " << getTypeName(I->second) << " " << I->first;
+  }
+
+  if (getConvergeField()) {
+    OS << ", " << getTypeName(getConvergeField()->getElementType()) << " Tolerance";
   }
 
   OS << ") {\n";
@@ -1085,11 +1114,33 @@ void CudaBackEnd::codegenHost(llvm::raw_ostream &OS) {
   OS << "  cudaEventDestroy(TotalStartEvent);\n";
   OS << "  cudaEventDestroy(TotalStopEvent);\n";
 
+  // Convergence check
+  if (const Field *CF = getConvergeField()) {
+    OS << "  bool Converged = true;\n";
+    OS << "  " << getTypeName(CF->getElementType()) << " *Check = new " << getTypeName(CF->getElementType()) << "[ArraySize];\n";
+    OS << "  Result = cudaMemcpy(Check, device" << CF->getName() << "_OutPtr, sizeof(" << getTypeName(CF->getElementType()) << ")*ArraySize, cudaMemcpyDeviceToHost);\n";
+    OS << "  assert(Result == cudaSuccess);\n";
+    OS << "  for (int i = 0; i < ArraySize; ++i) {\n";
+    OS << "    if (std::abs(Check[i]-Host_" << CF->getName() << "[i]) > Tolerance) {\n";
+    OS << "      std::cout << \"Check failed for \" << i << \": \" << std::abs(Check[i]-Host_" << CF->getName() << "[i]) << \"\\n\";\n";
+    OS << "      Converged = false;\n";
+    OS << "      break;\n";
+    OS << "    }\n";
+    OS << "  }\n";
+    OS << "  delete [] Check;\n";
+  }
+
   for (std::list<Field*>::iterator I = Fields.begin(), E  = Fields.end();
        I                                                 != E; ++I) {
     Field *F                                              = *I;
     OS << "  cudaFree(device" << F->getName() << "_In);\n";
     OS << "  cudaFree(device" << F->getName() << "_Out);\n";
+  }
+
+  if (getConvergeField()) {
+    OS << "  return Converged;\n";
+  } else {
+    OS << "  return;\n";
   }
 
   OS << "}\n";

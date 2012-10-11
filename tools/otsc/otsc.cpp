@@ -16,6 +16,8 @@
 #include "llvm/Support/system_error.h"
 #include "llvm/Support/ToolOutputFile.h"
 
+#include <bitset>
+
 using namespace llvm;
 using namespace llvm::sys;
 using namespace overtile;
@@ -83,6 +85,7 @@ struct SSPRegion {
   std::string  SSP;
   BackEnd     *BE;
   std::string  TimeStepsExpr;
+  std::string  ConvTolExpr;
 };
 
 bool IsStartOfRegion(size_t  Line, const SmallVectorImpl<SSPRegion> &Regions,
@@ -98,6 +101,29 @@ bool IsStartOfRegion(size_t  Line, const SmallVectorImpl<SSPRegion> &Regions,
   }
   return false;
 }
+
+
+// LLVM string functions from 3.2svn
+StringRef drop_front(StringRef S, unsigned N = 1) {
+  return S.substr(N);
+}
+
+StringRef::size_type find_first_not_of(StringRef S, StringRef Chars, size_t From = 0) {
+  std::bitset<1 << CHAR_BIT> CharBits;
+  for (StringRef::size_type  i = 0; i != Chars.size(); ++i)
+    CharBits.set((unsigned char)Chars[i]);
+
+  for (StringRef::size_type i = std::min(From, S.size()), e = S.size(); i != e; ++i)
+    if (!CharBits.test((unsigned char)S.data()[i]))
+      return i;
+  return StringRef::npos;
+}
+
+StringRef ltrim(StringRef S, StringRef Chars = " \t\n\v\f\r") {
+  return drop_front(S, std::min(S.size(), find_first_not_of(S, Chars)));
+}
+
+
 }
 
 
@@ -186,7 +212,7 @@ int main(int argc, char **argv) {
     // Extract SSP regions
     for (unsigned i = 0, e = Lines.size(); i != e; ++i) {
       
-      bool Start = Lines[i].ltrim().startswith("#pragma sdsl begin");
+      bool Start = ltrim(Lines[i]).startswith("#pragma sdsl begin");
 
       if (Start) {
         SSPRegion Reg;
@@ -196,7 +222,7 @@ int main(int argc, char **argv) {
         
         for (; i != e; ++i) {
 
-          bool End = Lines[i].ltrim().startswith("#pragma sdsl end");
+          bool End = ltrim(Lines[i]).startswith("#pragma sdsl end");
 
           if (End) {
             Reg.LastLine  = i;
@@ -246,6 +272,21 @@ int main(int argc, char **argv) {
             
       SmallVector<StringRef, 1> Matches;
       bool                      Match;
+
+      // converge attribute
+      Regex ConvergeRE("converge:[A-Za-z0-9_]+,[A-Za-z0-9_]+");
+      Match = ConvergeRE.match(Lines[Reg.FirstLine], &Matches);
+      if (Match) {
+        SmallVector<StringRef,2> Comps;
+        Matches[0].substr(9).split(Comps, ",");
+        if (Comps.size() != 2) {
+          llvm::errs() << "Bad 'converge' attribute, need 'field,tolerance'\n";
+          return 1;
+        }
+        const Field *F = Reg.BE->getGrid()->getFieldByName(Comps[0]);
+        Reg.BE->setConvergeField(F);
+        Reg.ConvTolExpr = Comps[1];
+      }
 
       // time_steps attribute
       Regex TimeStepsRE("time_steps:[A-Za-z0-9_]+");
@@ -312,7 +353,7 @@ int main(int argc, char **argv) {
         i = Reg.LastLine;
         Out->os() << "////// BEGIN OVERTILE CODEGEN\n";
         Out->os() << Reg.BE->getCanonicalPrototype();
-        Out->os() << Reg.BE->getCanonicalInvocation(Reg.TimeStepsExpr);
+        Out->os() << Reg.BE->getCanonicalInvocation(Reg.TimeStepsExpr, Reg.ConvTolExpr);
         Out->os() << "////// END OVERTILE CODEGEN\n";
       } else {
         Out->os() << Lines[i];

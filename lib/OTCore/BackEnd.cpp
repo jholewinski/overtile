@@ -12,7 +12,7 @@
 namespace overtile {
 
 BackEnd::BackEnd(Grid *G)
-  : TheGrid(G), TimeTileSize(1) {
+  : TheGrid(G), TimeTileSize(1), ConvergeField(NULL) {
   assert(G != NULL && "G cannot be NULL");
 
   BlockSize = new unsigned[G->getNumDimensions()];
