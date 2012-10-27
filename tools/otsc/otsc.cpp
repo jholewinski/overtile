@@ -76,6 +76,10 @@ EmbedTranslate("translator",
                cl::desc("Use shared library <LIB> as embedded DSL translator"),
                cl::value_desc("LIB"));
 
+static cl::opt<bool>
+EmbedPassThrough("p", cl::desc("Pass-through embedded translator"), cl::init(false));
+
+
 namespace {
 void PrintVersion() {
   errs() << "otsc - OverTile Stencil Compiler\n";
@@ -87,6 +91,7 @@ struct SSPRegion {
   size_t       FirstLine;
   size_t       LastLine;
   std::string  SSP;
+  std::string  SSP2;
   BackEnd     *BE;
   std::string  TimeStepsExpr;
   std::string  ConvTolExpr;
@@ -171,7 +176,7 @@ int main(int argc, char **argv) {
     bool      StartOfLine = true;
     StringRef Buffer      = CXXSource->getBuffer();
 
-    typedef int (*OTSCTRANSLATEFUNC)(const char*, char**);
+    typedef int (*OTSCTRANSLATEFUNC)(const char*, const char*, char**, char**);
     typedef void (*OTSCFREEFUNC)(char*);
 
     OTSCTRANSLATEFUNC OTSCTranslate = NULL;
@@ -244,7 +249,21 @@ int main(int argc, char **argv) {
         // Run translator if needed
         if (EmbedTranslate.getNumOccurrences() > 0) {
           char *ActualSSP;
-          int Res = OTSCTranslate(Reg.SSP.c_str(), &ActualSSP);
+          char *ActualSSP2;
+          
+          // Some translators need an expression for timestep count
+          SmallVector<StringRef, 1> Matches;
+          bool                      Match;
+          Regex TimeStepsRE("time_steps:[A-Za-z0-9_]+");
+          Match               = TimeStepsRE.match(Lines[Reg.FirstLine], &Matches);
+          //std::string TimeStepsExpr("TestTimeSteps");
+          std::string TimeStepsExpr;
+          if (Match) {
+            TimeStepsExpr = Matches[0].substr(11);
+          } else {
+            TimeStepsExpr = "TS";
+          }
+          int Res = OTSCTranslate(Reg.SSP.c_str(), TimeStepsExpr.c_str(), &ActualSSP, &ActualSSP2);
 
           if (Res != 0) {
             llvm::errs() << "Translator failed!\n";
@@ -252,7 +271,9 @@ int main(int argc, char **argv) {
           }
 
           Reg.SSP = std::string(ActualSSP);
+          Reg.SSP2 = std::string(ActualSSP2);
           OTSCFree(ActualSSP);
+          OTSCFree(ActualSSP2);
         }
         
         Regions.push_back(Reg);
@@ -260,94 +281,96 @@ int main(int argc, char **argv) {
     }
 
     // Create generators
-    for (unsigned i = 0, e = Regions.size(); i != e; ++i) {
-      
-      SSPRegion &Reg = Regions[i];
+    if (!EmbedPassThrough) {
+      for (unsigned i = 0, e = Regions.size(); i != e; ++i) {
+        
+        SSPRegion &Reg = Regions[i];
 
-      SourceMgr SM;
+        SourceMgr SM;
 
-      SSPParser P(MemoryBuffer::getMemBuffer(StringRef(Reg.SSP), "embedded"), SM);
-      if (error_code f = P.parseBuffer()) {
-        errs() << "Abort due to errors\n";
-        return 1;
-      }
-
-      Reg.BE = new CudaBackEnd(P.getGrid());
-      Reg.BE->setMachine(Machine);
-            
-      SmallVector<StringRef, 1> Matches;
-      bool                      Match;
-
-      // converge attribute
-      Regex ConvergeRE("converge:[A-Za-z0-9_]+,[A-Za-z0-9_]+");
-      Match = ConvergeRE.match(Lines[Reg.FirstLine], &Matches);
-      if (Match) {
-        SmallVector<StringRef,2> Comps;
-        Matches[0].substr(9).split(Comps, ",");
-        if (Comps.size() != 2) {
-          llvm::errs() << "Bad 'converge' attribute, need 'field,tolerance'\n";
+        SSPParser P(MemoryBuffer::getMemBuffer(StringRef(Reg.SSP), "embedded"), SM);
+        if (error_code f = P.parseBuffer()) {
+          errs() << "Abort due to errors\n";
           return 1;
         }
-        const Field *F = Reg.BE->getGrid()->getFieldByName(Comps[0]);
-        Reg.BE->setConvergeField(F);
-        Reg.ConvTolExpr = Comps[1];
-      }
 
-      // time_steps attribute
-      Regex TimeStepsRE("time_steps:[A-Za-z0-9_]+");
-      Match               = TimeStepsRE.match(Lines[Reg.FirstLine], &Matches);
-      if (Match) {
-        Reg.TimeStepsExpr = Matches[0].substr(11);
-      } else {
-        Reg.TimeStepsExpr = "TS";
-      }
+        Reg.BE = new CudaBackEnd(P.getGrid());
+        Reg.BE->setMachine(Machine);
+        
+        SmallVector<StringRef, 1> Matches;
+        bool                      Match;
 
-      // block attribute
-      Regex BlockRE("block:[0-9]+(,[0-9]+)*");
-      Match = BlockRE.match(Lines[Reg.FirstLine], &Matches);
-
-      if (Match) {
-        SmallVector<StringRef,4> Comps;
-        Matches[0].substr(6).split(Comps, ",");
-
-        for (unsigned ii = 0, ee = Comps.size(); ii != ee; ++ii) {
-          Reg.BE->setBlockSize(ii, atoi(Comps[ii].str().c_str()));
+        // converge attribute
+        Regex ConvergeRE("converge:[A-Za-z0-9_]+,[A-Za-z0-9_]+");
+        Match = ConvergeRE.match(Lines[Reg.FirstLine], &Matches);
+        if (Match) {
+          SmallVector<StringRef,2> Comps;
+          Matches[0].substr(9).split(Comps, ",");
+          if (Comps.size() != 2) {
+            llvm::errs() << "Bad 'converge' attribute, need 'field,tolerance'\n";
+            return 1;
+          }
+          const Field *F = Reg.BE->getGrid()->getFieldByName(Comps[0]);
+          Reg.BE->setConvergeField(F);
+          Reg.ConvTolExpr = Comps[1];
         }
-      } else {
-        Reg.BE->setBlockSize(0, BlockSizeX);
-        Reg.BE->setBlockSize(1, BlockSizeY);
-        Reg.BE->setBlockSize(2, BlockSizeZ);
-      }
 
-      // tile attribute
-      Regex TileRE("tile:[0-9]+(,[0-9]+)*");
-      Match = TileRE.match(Lines[Reg.FirstLine], &Matches);
-
-      if (Match) {
-        SmallVector<StringRef,4> Comps;
-        Matches[0].substr(5).split(Comps, ",");
-
-        for (unsigned ii = 0, ee = Comps.size(); ii != ee; ++ii) {
-          Reg.BE->setElements(ii, atoi(Comps[ii].str().c_str()));
+        // time_steps attribute
+        Regex TimeStepsRE("time_steps:[A-Za-z0-9_]+");
+        Match               = TimeStepsRE.match(Lines[Reg.FirstLine], &Matches);
+        if (Match) {
+          Reg.TimeStepsExpr = Matches[0].substr(11);
+        } else {
+          Reg.TimeStepsExpr = "TS";
         }
-      } else {
-        Reg.BE->setElements(0, ElementsX);
-        Reg.BE->setElements(1, ElementsY);
-        Reg.BE->setElements(2, ElementsZ);
+
+        // block attribute
+        Regex BlockRE("block:[0-9]+(,[0-9]+)*");
+        Match = BlockRE.match(Lines[Reg.FirstLine], &Matches);
+
+        if (Match) {
+          SmallVector<StringRef,4> Comps;
+          Matches[0].substr(6).split(Comps, ",");
+
+          for (unsigned ii = 0, ee = Comps.size(); ii != ee; ++ii) {
+            Reg.BE->setBlockSize(ii, atoi(Comps[ii].str().c_str()));
+          }
+        } else {
+          Reg.BE->setBlockSize(0, BlockSizeX);
+          Reg.BE->setBlockSize(1, BlockSizeY);
+          Reg.BE->setBlockSize(2, BlockSizeZ);
+        }
+
+        // tile attribute
+        Regex TileRE("tile:[0-9]+(,[0-9]+)*");
+        Match = TileRE.match(Lines[Reg.FirstLine], &Matches);
+
+        if (Match) {
+          SmallVector<StringRef,4> Comps;
+          Matches[0].substr(5).split(Comps, ",");
+
+          for (unsigned ii = 0, ee = Comps.size(); ii != ee; ++ii) {
+            Reg.BE->setElements(ii, atoi(Comps[ii].str().c_str()));
+          }
+        } else {
+          Reg.BE->setElements(0, ElementsX);
+          Reg.BE->setElements(1, ElementsY);
+          Reg.BE->setElements(2, ElementsZ);
+        }
+
+        // time attribute
+        Regex TimeRE("time:[0-9]+(,[0-9]+)*");
+        Match = TimeRE.match(Lines[Reg.FirstLine], &Matches);
+
+        if (Match) {
+          Reg.BE->setTimeTileSize(atoi(Matches[0].substr(5).str().c_str()));
+        } else {
+          Reg.BE->setTimeTileSize(TimeTileSize);
+        }
+
+        Reg.BE->setVerbose(Verbose);
+        Reg.BE->run();
       }
-
-      // time attribute
-      Regex TimeRE("time:[0-9]+(,[0-9]+)*");
-      Match = TimeRE.match(Lines[Reg.FirstLine], &Matches);
-
-      if (Match) {
-        Reg.BE->setTimeTileSize(atoi(Matches[0].substr(5).str().c_str()));
-      } else {
-        Reg.BE->setTimeTileSize(TimeTileSize);
-      }
-
-      Reg.BE->setVerbose(Verbose);
-      Reg.BE->run();
     }
 
     // Write output
@@ -357,8 +380,12 @@ int main(int argc, char **argv) {
       if (IsStartOfRegion(i, Regions, Reg)) {
         i = Reg.LastLine;
         Out->os() << "////// BEGIN OVERTILE CODEGEN\n";
-        Out->os() << Reg.BE->getCanonicalPrototype();
-        Out->os() << Reg.BE->getCanonicalInvocation(Reg.TimeStepsExpr, Reg.ConvTolExpr);
+        if (EmbedPassThrough) {
+          Out->os() << Reg.SSP2 << "\n";
+        } else {
+          Out->os() << Reg.BE->getCanonicalPrototype();
+          Out->os() << Reg.BE->getCanonicalInvocation(Reg.TimeStepsExpr, Reg.ConvTolExpr);
+        }
         Out->os() << "////// END OVERTILE CODEGEN\n";
       } else {
         Out->os() << Lines[i];
@@ -372,7 +399,11 @@ int main(int argc, char **argv) {
     for (unsigned i = 0, e = Regions.size(); i != e; ++i) {
       
       SSPRegion &Reg = Regions[i];
-      Reg.BE->codegen(Out->os());
+      if (EmbedPassThrough) {
+        Out->os () << Reg.SSP << "\n";
+      } else {
+        Reg.BE->codegen(Out->os());
+      }
     }
   } else {
     // Input is just pure SSP, so codegen just the SSP
