@@ -80,8 +80,28 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
     OS << ", " << getTypeName(I->second) << " " << I->first;
   }
 
+  if (useManualGrid() && G->getNumDimensions() == 3) {
+    for (unsigned i = 0; i < G->getNumDimensions(); ++i) {
+      OS << ", int GridDim_" << getDimensionIndex(i);
+    }
+  }
+  
   OS << ") {\n";
 
+  if (useManualGrid() && G->getNumDimensions() == 3) {
+   OS << "  const int BlockIdx_z = blockIdx.x / (GridDim_x*GridDim_y);\n";
+    OS << "  int Rem = blockIdx.x % (GridDim_x*GridDim_y);\n";
+    OS << "  const int BlockIdx_y = Rem / GridDim_x;\n";
+    OS << "  const int BlockIdx_x = Rem % GridDim_x;\n";
+  } else {
+    OS << "  const int BlockIdx_x = blockIdx.x;\n";
+    OS << "  const int BlockIdx_y = blockIdx.y;\n";
+    OS << "  const int BlockIdx_z = blockIdx.z;\n";
+    OS << "  const int GridDim_x = gridDim.x;\n";
+    OS << "  const int GridDim_y = gridDim.y;\n";
+    OS << "  const int GridDim_z = gridDim.z;\n";
+  }
+  
   std::string        SharedSizeDecl;
   raw_string_ostream SharedSizeStr(SharedSizeDecl);
 
@@ -193,7 +213,7 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
   OS << "  // Kernel init\n";
   for (unsigned i = 0, e = G->getNumDimensions(); i < e; ++i) {
     OS << "  int local_" << i << " = threadIdx." << getDimensionIndex(i) << ";\n";
-    OS << "  int group_" << i << " = blockIdx." << getDimensionIndex(i) << ";\n";
+    OS << "  int group_" << i << " = BlockIdx_" << getDimensionIndex(i) << ";\n";
     if (i == 0) {
       OS << "  int tid_" << i << " = group_" << i << " * real_per_block_" << i
          << " + local_" << i << " - Halo_Left_" << i <<";\n";
@@ -216,9 +236,9 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
 
     // Begin compute loops
 
-    OS << " if (blockIdx.x == 0 || blockIdx.x == gridDim.x-1";
+    OS << " if (BlockIdx_x == 0 || BlockIdx_x == GridDim_x-1";
     for (unsigned i = 1, e = G->getNumDimensions(); i < e; ++i) {
-      OS << " || blockIdx." << getDimensionIndex(i) << " == 0 || blockIdx." << getDimensionIndex(i) << " == gridDim." << getDimensionIndex(i) << "-1";
+      OS << " || BlockIdx_" << getDimensionIndex(i) << " == 0 || BlockIdx_" << getDimensionIndex(i) << " == GridDim_" << getDimensionIndex(i) << "-1";
     }
     OS << " ) {\n";
 
@@ -438,9 +458,9 @@ void CudaBackEnd::codegenDevice(llvm::raw_ostream &OS) {
   InTS0 = false;
 
 
-  OS << " if (blockIdx.x == 0 || blockIdx.x == gridDim.x-1";
+  OS << " if (BlockIdx_x == 0 || BlockIdx_x == GridDim_x-1";
   for (unsigned i = 1, e = G->getNumDimensions(); i < e; ++i) {
-    OS << " || blockIdx." << getDimensionIndex(i) << " == 0 || blockIdx." << getDimensionIndex(i) << " == gridDim." << getDimensionIndex(i) << "-1";
+    OS << " || BlockIdx_" << getDimensionIndex(i) << " == 0 || BlockIdx_" << getDimensionIndex(i) << " == GridDim_" << getDimensionIndex(i) << "-1";
   }
   OS << " ) {\n";
 
@@ -1017,11 +1037,16 @@ void CudaBackEnd::codegenHost(llvm::raw_ostream &OS) {
        << i << " > 0 ? 1 : 0);\n";
   }
 
-  OS << "  dim3 grid_size(num_blocks_0";
-  for (unsigned i = 1, e = G->getNumDimensions(); i < e; ++i) {
-    OS << ", num_blocks_" << i;
+  if (useManualGrid() && G->getNumDimensions() == 3) {
+    OS << "  int num_blocks = num_blocks_0*num_blocks_1*num_blocks_2;\n";
+    OS << "  dim3 grid_size(num_blocks);\n";
+  } else {
+    OS << "  dim3 grid_size(num_blocks_0";
+    for (unsigned i = 1, e = G->getNumDimensions(); i < e; ++i) {
+      OS << ", num_blocks_" << i;
+    }
+    OS << ");\n";
   }
-  OS << ");\n";
 
   OS << "  cudaThreadSynchronize();\n";
   OS << "  cudaEvent_t StartEvent, StopEvent;\n";
@@ -1048,6 +1073,10 @@ void CudaBackEnd::codegenHost(llvm::raw_ostream &OS) {
     OS << ", " << I->first;
   }
 
+  if (useManualGrid() && G->getNumDimensions() == 3) {
+    OS << ", num_blocks_0, num_blocks_1, num_blocks_2";
+  }
+  
   OS << ");\n";
 
   OS << "    cudaError_t Err = cudaGetLastError();\n";

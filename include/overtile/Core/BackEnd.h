@@ -67,7 +67,8 @@ public:
     }
   }
 
-
+  const std::string &getMachine() const { return Machine; }
+  void setMachine(llvm::StringRef M) { Machine = M; }
   
   Grid *getGrid() { return TheGrid; }
   const Grid *getGrid() const { return TheGrid; }
@@ -101,6 +102,7 @@ private:
   RegionMap         Regions;
   bool              Verbose;
   const Field      *ConvergeField;
+  std::string       Machine;
 };
 
 }

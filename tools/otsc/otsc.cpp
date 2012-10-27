@@ -29,6 +29,10 @@ static cl::opt<std::string>
 OutputFileName("o", cl::desc("Specify output filename"),
                cl::value_desc("filename"), cl::init("-"));
 
+static cl::opt<std::string>
+Machine("machine", cl::desc("Set target machine"),
+        cl::value_desc("machine"), cl::init(""));
+
 static cl::opt<unsigned>
 TimeTileSize("t", cl::desc("Specify time tile size"),
              cl::value_desc("N"), cl::init(1));
@@ -269,6 +273,7 @@ int main(int argc, char **argv) {
       }
 
       Reg.BE = new CudaBackEnd(P.getGrid());
+      Reg.BE->setMachine(Machine);
             
       SmallVector<StringRef, 1> Matches;
       bool                      Match;

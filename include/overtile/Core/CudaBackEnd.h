@@ -51,6 +51,14 @@ private:
   void codegenFieldRefLoad(FieldRef *Ref, llvm::raw_ostream &OS, std::set<std::string> &Idents);
 
   std::string getBoundExpr(BoundExpr &Expr, unsigned Dim);
+
+
+  bool useManualGrid() const {
+    llvm::StringRef Machine = getMachine();
+    
+    return (Machine.compare("gt200") == 0);
+  }
+  
 };
 
 }

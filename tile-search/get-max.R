@@ -5,7 +5,7 @@ require('utils')
 a <- read.csv(file("stdin"))
 
 a <- subset(a, compute_elapsed > 0.01)
-a <- data.frame(a, gstencils_compute_2d=6000*6000*100/1e9/a$compute_elapsed, gstencils_compute_3d=300*300*300*100/1e9/a$compute_elapsed)
+a <- data.frame(a, gstencils_compute_2d=6000*6000*1000/1e9/a$compute_elapsed, gstencils_compute_3d=400*400*400*1000/1e9/a$compute_elapsed)
 
 cat('GStencils/sec Total: ')
 cat(max(a$gstencils))
