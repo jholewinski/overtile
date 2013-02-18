@@ -3,7 +3,7 @@
  *
  * OverTile: Research compiler for overlapped tiling on GPU architectures
  *
- * Copyright (C) 2012, University of California Los Angeles
+ * Copyright (C) 2012, Ohio State University
  *
  * This program can be redistributed and/or modified under the terms
  * of the license specified in the LICENSE.txt file at the root of the
