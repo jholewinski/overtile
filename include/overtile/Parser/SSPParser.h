@@ -1,3 +1,21 @@
+/*
+ * SSPParser.h: This file is part of the OverTile project.
+ *
+ * OverTile: Research compiler for overlapped tiling on GPU architectures
+ *
+ * Copyright (C) 2012, University of California Los Angeles
+ *
+ * This program can be redistributed and/or modified under the terms
+ * of the license specified in the LICENSE.txt file at the root of the
+ * project.
+ *
+ * Contact: P Sadayappan <saday@cse.ohio-state.edu>
+ */
+
+/**
+ * @file: SSPParser.h
+ * @author: Justin Holewinski <justin.holewinski@gmail.com>
+ */
 
 #ifndef OVERTILE_PARSER_SSPPARSER_H
 #define OVERTILE_PARSER_SSPPARSER_H
