@@ -18,7 +18,7 @@ if (CUDA_FOUND AND PYTHONINTERP_FOUND)
   set(OT_TEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
   set(OT_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 
-  find_program(NVCC_BIN nvcc PATHS "${CUDA_SDK_ROOT_DIR}")
+  find_program(NVCC_BIN nvcc PATHS "${CUDA_SDK_ROOT_DIR}/bin")
   if (NOT NVCC_BIN)
     message(FATAL_ERROR "Found CUDA SDK, but could not locate nvcc!")
   endif()  
